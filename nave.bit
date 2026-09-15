@@ -1,0 +1,44 @@
+tela 160x120
+fundo preto
+
+pontos recebe 0
+
+ator Nave
+  desenho retângulo 12, 8, verde
+  posição 74, 100
+  controlado por setas
+  limita à tela
+  quando atualiza:
+    se tecla("espaco") então
+      diga "Laser disparado!"
+    fim
+  fim
+fim
+
+ator Inimigo
+  desenho quadrado 8, vermelho
+  posição 76, 10
+  velocidade 1, 0.6
+  quica nas bordas horizontais
+  quando atualiza:
+    se y > 120 então
+      y recebe 0
+      x recebe aleatorio(10, 140)
+    fim
+  fim
+  quando colide com "Nave":
+    diga "Alerta de colisão!"
+  fim
+fim
+
+ator Estrela
+  desenho quadrado 2, amarelo
+  posição 80, 20
+  velocidade 0, 1
+  quando atualiza:
+    se y > 120 então
+      y recebe 0
+      x recebe aleatorio(0, 160)
+    fim
+  fim
+fim

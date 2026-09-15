@@ -1,0 +1,21 @@
+{
+  "name": "bit-linguagem",
+  "version": "1.2.0",
+  "private": false,
+  "description": "BIT — linguagem textual brasileira para criação de jogos 2D.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "verify": "node scripts/verify-bit.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  }
+}

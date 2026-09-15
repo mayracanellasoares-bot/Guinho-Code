@@ -1,0 +1,85 @@
+tela 160x120
+fundo preto
+
+pontos recebe 0
+linhas recebe 0
+tipo recebe 1
+
+ator BordaEsq
+  desenho retângulo 2, 108, cinza
+  posição 48, 6
+fim
+
+ator BordaDir
+  desenho retângulo 2, 108, cinza
+  posição 112, 6
+fim
+
+ator Chao
+  desenho retângulo 66, 4, cinza
+  posição 48, 114
+fim
+
+ator Pilha1
+  desenho retângulo 18, 6, azul
+  posição 54, 108
+fim
+
+ator Pilha2
+  desenho retângulo 18, 6, verde
+  posição 90, 108
+fim
+
+ator Peca
+  desenho retângulo 18, 6, ciano
+  posição 72, 8
+  velocidade 0, 0.8
+  quando atualiza:
+    se tecla("arrowleft") ou tecla("a") então
+      se x > 52 então
+        x recebe x - 1.5
+      fim
+    fim
+
+    se tecla("arrowright") ou tecla("d") então
+      se x < 92 então
+        x recebe x + 1.5
+      fim
+    fim
+
+    se tecla("arrowdown") ou tecla("s") então
+      y recebe y + 1.5
+    fim
+
+    # Ao atingir o fundo
+    se y >= 102 então
+      pontos recebe pontos + 10
+      diga "Peça encaixada! Pontos: " + pontos
+      y recebe 8
+      x recebe 72
+      tipo recebe aleatorio(1, 3)
+      se tipo == 1 então
+        largura recebe 18
+        altura recebe 6
+      senão se tipo == 2 então
+        largura recebe 12
+        altura recebe 12
+      senão
+        largura recebe 12
+        altura recebe 6
+      fim
+    fim
+  fim
+  quando colide com "Pilha1":
+    pontos recebe pontos + 15
+    diga "Linha eliminada! Total: " + pontos
+    y recebe 8
+    x recebe 72
+  fim
+  quando colide com "Pilha2":
+    pontos recebe pontos + 15
+    diga "Linha eliminada! Total: " + pontos
+    y recebe 8
+    x recebe 72
+  fim
+fim

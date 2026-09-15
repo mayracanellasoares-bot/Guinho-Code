@@ -1,0 +1,4 @@
+jogo "Olá BIT"
+fundo azul
+nome recebe "BIT"
+diga "Olá, " + nome

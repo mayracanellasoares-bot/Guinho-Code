@@ -1,0 +1,16 @@
+{
+  "name": "Bit 1.0 — Criação de Jogos 2D",
+  "short_name": "Bit 1.0",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f1016",
+  "theme_color": "#1a1b26",
+  "description": "Linguagem educacional para criação de jogos 2D no navegador e mobile",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

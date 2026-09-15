@@ -1,0 +1,15 @@
+tela 320x180
+fundo preto
+
+ator Jogador
+  desenho quadrado 16, verde
+  posição 40, 80
+  quando atualiza:
+    se tecla("direita") então
+      x recebe x + 3
+    fim
+    se tecla("esquerda") então
+      x recebe x - 3
+    fim
+  fim
+fim

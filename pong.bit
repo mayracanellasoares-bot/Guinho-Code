@@ -1,0 +1,53 @@
+tela 160x120
+fundo preto
+
+pontos1 recebe 0
+pontos2 recebe 0
+
+ator Jogador1
+  desenho retângulo 4, 24, branco
+  posição 8, 48
+  controlado por setas
+  limita à tela
+fim
+
+ator Jogador2
+  desenho retângulo 4, 24, branco
+  posição 148, 48
+  limita à tela
+  quando atualiza:
+    se Bola.y > y então
+      y recebe y + 1.2
+    senão se Bola.y < y então
+      y recebe y - 1.2
+    fim
+  fim
+fim
+
+ator Bola
+  desenho quadrado 4, branco
+  posição 78, 58
+  velocidade 2, 1.5
+  quica nas bordas verticais
+  quando atualiza:
+    se x < 0 então
+      pontos2 recebe pontos2 + 1
+      x recebe 78
+      y recebe 58
+      vx recebe 2
+      diga "Ponto Jogador 2!"
+    senão se x > 160 então
+      pontos1 recebe pontos1 + 1
+      x recebe 78
+      y recebe 58
+      vx recebe -2
+      diga "Ponto Jogador 1!"
+    fim
+  fim
+  quando colide com "Jogador1":
+    vx recebe 2.2
+  fim
+  quando colide com "Jogador2":
+    vx recebe -2.2
+  fim
+fim

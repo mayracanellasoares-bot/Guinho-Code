@@ -1,0 +1,51 @@
+tela 160x120
+fundo preto
+
+pontos recebe 0
+
+ator Paleta
+  desenho retângulo 20, 4, azul
+  posição 70, 110
+  controlado por setas
+  limita à tela
+fim
+
+ator Bola
+  desenho quadrado 4, branco
+  posição 78, 60
+  velocidade 1.5, -2
+  quica nas bordas
+  quando colide com "Paleta":
+    vy recebe -2
+  fim
+  quando colide com "Bloco1":
+    vy recebe 2
+    pontos recebe pontos + 10
+    diga "Bloco 1 destruído!"
+  fim
+  quando colide com "Bloco2":
+    vy recebe 2
+    pontos recebe pontos + 10
+    diga "Bloco 2 destruído!"
+  fim
+  quando colide com "Bloco3":
+    vy recebe 2
+    pontos recebe pontos + 10
+    diga "Bloco 3 destruído!"
+  fim
+fim
+
+ator Bloco1
+  desenho retângulo 16, 6, vermelho
+  posição 30, 20
+fim
+
+ator Bloco2
+  desenho retângulo 16, 6, amarelo
+  posição 70, 20
+fim
+
+ator Bloco3
+  desenho retângulo 16, 6, verde
+  posição 110, 20
+fim
