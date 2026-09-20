@@ -1,662 +1,76 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BIT 1.2 — Criação de Jogos 2D em Português</title>
-  <meta name="description" content="Linguagem de programação educacional para criar jogos 2D no navegador e celular." />
-  <meta name="theme-color" content="#1a1a24" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <style>
-    :root {
-      --bg: #0f1016;
-      --card-bg: #1a1b26;
-      --surface: #242638;
-      --surface-hover: #2e324a;
-      --primary: #4ade80;
-      --primary-hover: #22c55e;
-      --accent: #38bdf8;
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
-      --border: #334155;
-      --danger: #f87171;
-    }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-    }
-    header {
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border);
-      padding: 8px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-shrink: 0;
-      flex-wrap: wrap;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .brand-logo {
-      width: 28px;
-      height: 28px;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      color: #000;
-      font-size: 16px;
-    }
-    .brand-title {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    .brand-tag {
-      font-size: 11px;
-      background: var(--surface);
-      color: var(--accent);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    select, button {
-      font-family: inherit;
-      font-size: 13px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      padding: 6px 12px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    select:focus, button:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-    .btn-new {
-      background: linear-gradient(135deg, #38bdf8, #818cf8);
-      color: #000;
-      font-weight: 700;
-      border: none;
-    }
-    .btn-new:hover {
-      filter: brightness(1.1);
-    }
-    .btn-lib {
-      background: linear-gradient(135deg, #8b5cf6, #ec4899);
-      color: #fff;
-      font-weight: 600;
-      border: none;
-    }
-    .btn-lib:hover {
-      filter: brightness(1.15);
-    }
-    .btn-run {
-      background: var(--primary);
-      color: #000;
-      font-weight: 600;
-      border: none;
-    }
-    .btn-run:hover {
-      background: var(--primary-hover);
-    }
-    .btn-stop {
-      background: var(--danger);
-      color: #fff;
-      border: none;
-    }
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: row;
-      overflow: hidden;
-    }
-    @media (max-width: 768px) {
-      main {
-        flex-direction: column;
-      }
-    }
-    .editor-pane {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border);
-      min-width: 0;
-      background: #13141f;
-    }
-    .editor-bar {
-      background: var(--card-bg);
-      padding: 6px 12px;
-      font-size: 12px;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .editor-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .save-status {
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(74, 222, 128, 0.15);
-      color: var(--primary);
-      font-weight: 600;
-    }
-    .editor-tools {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .btn-snippet {
-      font-size: 11px;
-      padding: 3px 8px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      border-radius: 4px;
-    }
-    .btn-snippet:hover {
-      color: var(--text);
-      border-color: var(--accent);
-    }
-    #code-editor {
-      flex: 1;
-      width: 100%;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: #e2e8f0;
-      font-family: "Fira Code", Consolas, "Courier New", monospace;
-      font-size: 13px;
-      line-height: 1.5;
-      padding: 12px;
-      resize: none;
-      tab-size: 2;
-    }
-    .preview-pane {
-      width: 360px;
-      display: flex;
-      flex-direction: column;
-      background: var(--card-bg);
-      align-items: center;
-      padding: 12px;
-      gap: 12px;
-      overflow-y: auto;
-    }
-    @media (max-width: 768px) {
-      .preview-pane {
-        width: 100%;
-        height: 48%;
-        border-top: 1px solid var(--border);
-      }
-    }
-    .canvas-container {
-      background: #000;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 320px;
-      height: 240px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    #game-canvas {
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      width: 100%;
-      height: 100%;
-    }
-    .virtual-gamepad {
-      display: grid;
-      grid-template-columns: repeat(3, 44px);
-      grid-template-rows: repeat(3, 44px);
-      gap: 6px;
-      margin-top: 4px;
-    }
-    .pad-btn {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      touch-action: manipulation;
-    }
-    .pad-btn:active {
-      background: var(--accent);
-      color: #000;
-    }
-    .console-log {
-      width: 100%;
-      background: #0d0e15;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px;
-      font-family: monospace;
-      font-size: 11px;
-      height: 80px;
-      overflow-y: auto;
-      color: var(--text-muted);
-    }
-    .console-log .log-entry {
-      margin-bottom: 2px;
-    }
-    .console-log .log-error {
-      color: var(--danger);
-    }
-
-    /* Modal Criar Novo Programa */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.75);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 1000;
-      backdrop-filter: blur(4px);
-    }
-    .modal-overlay.hidden {
-      display: none;
-    }
-    .modal-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      width: 100%;
-      max-width: 480px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
-    }
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 20px;
-      cursor: pointer;
-      padding: 4px;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .form-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-    .form-input {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-    }
-    .form-input:focus {
-      border-color: var(--accent);
-    }
-    .template-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .template-card {
-      background: var(--surface);
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      padding: 10px;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.15s ease;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .template-card:hover {
-      background: var(--surface-hover);
-      border-color: var(--accent);
-    }
-    .template-card.selected {
-      border-color: var(--accent);
-      background: rgba(56, 189, 248, 0.1);
-    }
-    .template-card-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .template-card-desc {
-      font-size: 11px;
-      color: var(--text-muted);
-      line-height: 1.3;
-    }
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    /* Estilos da Biblioteca do Bit */
-    .modal-card-library {
-      max-width: 720px;
-      max-height: 88vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .lib-search-bar {
-      display: flex;
-      gap: 8px;
-    }
-    .lib-categories {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .lib-cat-btn {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-    .lib-cat-btn:hover {
-      color: var(--text);
-      border-color: var(--accent);
-    }
-    .lib-cat-btn.active {
-      background: var(--accent);
-      color: #000;
-      font-weight: 700;
-      border-color: var(--accent);
-    }
-    .lib-list {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding-right: 4px;
-      max-height: 52vh;
-    }
-    .lib-item-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      transition: border-color 0.15s;
-    }
-    .lib-item-card:hover {
-      border-color: #475569;
-    }
-    .lib-item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-    .lib-item-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--accent);
-      font-family: monospace;
-    }
-    .lib-item-badge {
-      font-size: 10px;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-muted);
-      padding: 2px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      font-weight: 600;
-    }
-    .lib-item-syntax {
-      font-family: monospace;
-      font-size: 12px;
-      background: #0d0e15;
-      padding: 6px 8px;
-      border-radius: 4px;
-      border-left: 3px solid var(--primary);
-      color: #e2e8f0;
-      white-space: pre-wrap;
-    }
-    .lib-item-desc {
-      font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.4;
-    }
-    .lib-item-example {
-      background: #0d0e15;
-      border-radius: 4px;
-      padding: 6px 8px;
-      font-family: monospace;
-      font-size: 11px;
-      color: #94a3b8;
-      white-space: pre-wrap;
-      border: 1px dashed var(--border);
-    }
-    .lib-item-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 6px;
-      margin-top: 4px;
-    }
-    .btn-lib-action {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 4px;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>GUINHO-CODE · Local + Online</title>
+<style>
+*{box-sizing:border-box}html,body{height:100%;margin:0;background:#000;color:#00f65b;font:14px/1.48 ui-monospace,SFMono-Regular,Consolas,monospace}body{display:flex;flex-direction:column}#terminal{flex:1;min-height:0;overflow:auto;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}.box{border:1px solid #8b5a2b;background:#050805;padding:12px}.title{color:#c89247;font-weight:700}.logo{color:#00f65b;white-space:pre;overflow-x:auto;font-size:clamp(7px,1.7vw,11px);line-height:1.08;margin:8px 0}.status{color:#d5a45f;margin:9px 0}.line{margin:10px 0;white-space:pre-wrap}.answer{color:#7cff8b}.error{color:#ff7777}.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}button,select{border:1px solid #9c702f;background:#070707;color:#ffc25b;padding:7px 9px;font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:wait}.shortcut{border:0;background:none;color:#59e8f2;padding:3px 0;display:block;text-align:left}.shortcut:hover{text-decoration:underline}#input-area{display:flex;gap:8px;align-items:center;min-height:52px;border-top:1px solid #00b843;padding:5px 9px;padding-bottom:max(5px,env(safe-area-inset-bottom))}#user-input{flex:1;min-width:0;background:transparent;color:#00f65b;border:0;outline:0;font:16px ui-monospace,SFMono-Regular,Consolas,monospace}#send{color:#00f65b;border-color:#008c39}
+</style>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <div class="brand-logo">B</div>
-      <div>
-        <div class="brand-title">BIT</div>
-      </div>
-      <span class="brand-tag">v1.2.0</span>
-    </div>
-    <div class="header-actions">
-      <button id="btn-new" class="btn-new" title="Criar um novo jogo ou programa">✨ + Novo Programa</button>
-      <button id="btn-library" class="btn-lib" title="Consultar comandos, funções e referências da Linguagem Bit">📚 Biblioteca</button>
-      <select id="example-select">
-        <optgroup label="Seu Projeto">
-          <option value="meu_programa">★ Meu Programa</option>
-        </optgroup>
-        <optgroup label="Exemplos Prontos">
-          <option value="tetris">Tetris 2D</option>
-          <option value="pong">Pong 2D</option>
-          <option value="nave">Nave Espacial</option>
-          <option value="breakout">Breakout</option>
-          <option value="senao_se">Lógica: Senão Se</option>
-        </optgroup>
-      </select>
-      <button id="btn-run" class="btn-run">▶ Executar</button>
-      <button id="btn-stop" class="btn-stop">■ Parar</button>
-    </div>
-  </header>
-  <main>
-    <div class="editor-pane">
-      <div class="editor-bar">
-        <div class="editor-bar-left">
-          <span id="project-title" style="font-weight: 600; color: var(--text);">Código Bit</span>
-          <span id="save-status" class="save-status">Salvo</span>
-        </div>
-        <div class="editor-tools">
-          <span style="font-size: 11px; margin-right: 4px;">Inserir:</span>
-          <button class="btn-snippet" data-snippet="ator" title="Inserir modelo de ator">+ Ator</button>
-          <button class="btn-snippet" data-snippet="se" title="Inserir condição se ... então">+ Se</button>
-          <button class="btn-snippet" data-snippet="repita" title="Inserir loop repita">+ Repita</button>
-          <button class="btn-snippet" data-snippet="diga" title="Inserir comando diga">+ Diga</button>
-          <span id="cursor-pos" style="margin-left: 8px;">Linha 1, Col 1</span>
-        </div>
-      </div>
-      <textarea id="code-editor" spellcheck="false"></textarea>
-    </div>
-    <div class="preview-pane">
-      <div class="canvas-container">
-        <canvas id="game-canvas" width="160" height="120"></canvas>
-      </div>
-      <div class="virtual-gamepad">
-        <div></div>
-        <button class="pad-btn" id="pad-up">▲</button>
-        <div></div>
-        <button class="pad-btn" id="pad-left">◀</button>
-        <button class="pad-btn" id="pad-act">●</button>
-        <button class="pad-btn" id="pad-right">▶</button>
-        <div></div>
-        <button class="pad-btn" id="pad-down">▼</button>
-        <div></div>
-      </div>
-      <div class="console-log" id="console-output">
-        <div class="log-entry">Console Bit pronto. Pressione "Executar".</div>
-      </div>
-    </div>
-  </main>
-
-  <!-- Modal Criar Novo Programa -->
-  <div id="new-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">Novo Programa Bit</div>
-        <button id="btn-modal-close" class="modal-close">✕</button>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="new-program-name">Nome do seu Jogo ou Programa:</label>
-        <input type="text" id="new-program-name" class="form-input" value="Meu Novo Jogo" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Escolha como deseja começar:</label>
-        <div class="template-grid">
-          <div class="template-card selected" data-template="personagem">
-            <div class="template-card-title">🎮 Personagem</div>
-            <div class="template-card-desc">Ator controlável com setas ou gamepad virtual.</div>
-          </div>
-          <div class="template-card" data-template="bola">
-            <div class="template-card-title">⚽ Bola Quicando</div>
-            <div class="template-card-desc">Física com velocidade e quique automático nas bordas.</div>
-          </div>
-          <div class="template-card" data-template="coletar">
-            <div class="template-card-title">🎯 Coletar Moeda</div>
-            <div class="template-card-desc">Jogador, moeda aleatória e contador de pontos.</div>
-          </div>
-          <div class="template-card" data-template="tetris">
-            <div class="template-card-title">🧱 Tetris 2D</div>
-            <div class="template-card-desc">Peças caindo, paredes laterais, chão e pontuação.</div>
-          </div>
-          <div class="template-card" data-template="vazio">
-            <div class="template-card-title">📄 Em Branco</div>
-            <div class="template-card-desc">Estrutura mínima de tela 160x120 limpa.</div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button id="btn-modal-cancel">Cancelar</button>
-        <button id="btn-modal-confirm" class="btn-new">Criar Programa</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal da Biblioteca do Bit -->
-  <div id="library-modal" class="modal-overlay hidden">
-    <div class="modal-card modal-card-library">
-      <div class="modal-header">
-        <div class="modal-title">📚 Biblioteca da BIT 1.2</div>
-        <button id="btn-lib-close" class="modal-close">✕</button>
-      </div>
-      
-      <div class="lib-search-bar">
-        <input type="text" id="lib-search-input" class="form-input" style="flex: 1;" placeholder="🔍 Buscar comando, função ou propriedade (ex: aleatorio, tela, quica)..." />
-      </div>
-
-      <div class="lib-categories" id="lib-categories">
-        <button class="lib-cat-btn active" data-cat="todas">Todas</button>
-        <button class="lib-cat-btn" data-cat="cenario">Cenário</button>
-        <button class="lib-cat-btn" data-cat="atores">Atores</button>
-        <button class="lib-cat-btn" data-cat="comportamento">Comportamento</button>
-        <button class="lib-cat-btn" data-cat="eventos">Eventos</button>
-        <button class="lib-cat-btn" data-cat="controle">Controle</button>
-        <button class="lib-cat-btn" data-cat="funcoes">Funções</button>
-        <button class="lib-cat-btn" data-cat="propriedades">Propriedades</button>
-        <button class="lib-cat-btn" data-cat="cores">Cores</button>
-      </div>
-
-      <div class="lib-list" id="lib-list">
-        <!-- Renderizado dinamicamente via JS -->
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="/src/main.ts"></script>
+<main id="terminal" role="log" aria-live="polite">
+<section class="box">
+<div class="title">GUINHO-CODE v4.0 · LOCAL + ONLINE</div>
+<pre class="logo">  ___          _          _                   ___            _
+ / __|  _  _  (_)  _ _   | |_    ___   ___   / __|  ___   __| |  ___
+| (_ | | || | | | | ' \  | ' \  / _ \ |___| | (__  / _ \ / _` | / -_)
+ \___|  \_,_| |_| |_||_| |_||_| \___/        \___| \___/ \__,_| \___|</pre>
+<div id="status" class="status">Escolha Local/Online e toque em Conectar.</div>
+<div class="toolbar"><select id="mode"><option value="online">Online · OpenRouter</option><option value="local">Local · Termux</option></select><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button></div>
+<div class="title">PROMPTS DE ATALHO:</div>
+<button class="shortcut" data-cmd="/web">/web - HTML/CSS/JS Poda Game</button>
+<button class="shortcut" data-cmd="/canvas">/canvas - Canvas Matrix</button>
+<button class="shortcut" data-cmd="/cpp">/cpp - C++ Retro State</button>
+<button class="shortcut" data-cmd="/csharp">/csharp - C# Movement</button>
+</section>
+</main>
+<form id="input-area"><span>&gt;</span><input id="user-input" type="text" disabled autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Conecte para começar..."/><button id="send" type="submit" disabled>Enviar</button></form>
+<script>
+(() => {
+'use strict';
+const LOCAL_API='http://127.0.0.1:8080/v1',ONLINE_API='/api/chat';
+const term=document.querySelector('#terminal'), status=document.querySelector('#status'), input=document.querySelector('#user-input');
+const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send'), mode=document.querySelector('#mode');
+const system={role:'system',content:'Você é Guinho-Code, especialista em engenharia de software e jogos retrô. Responda em português de forma direta. Quando gerar código, entregue código utilizável.'};
+const prompts={ '/web':'Crie o jogo Poda em um único arquivo HTML com Canvas, pixels verdes e controles para toque.', '/canvas':'Crie um script Canvas JavaScript para renderizar sprites retrô com malha de pixels.', '/cpp':'Desenvolva uma classe gerenciadora de estados para um jogo em C++.', '/csharp':'Escreva um componente em C# para movimentação baseada em vetores.' };
+let connected=false,busy=false,history=[system],controller=null,activeMode='online';
+function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
+function setStatus(text){status.textContent=text}
+function controls(){input.disabled=!connected||busy;send.disabled=input.disabled;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;mode.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
+function updateConnection(ok,message){connected=ok;setStatus(message);controls();if(ok)input.focus()}
+async function checkServer(){activeMode=mode.value;connect.disabled=true;try{if(activeMode==='online'){setStatus('Conectando ao backend online...');const r=await fetch('/api/health',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();updateConnection(true,'ONLINE ATIVO: '+data.model+' · chave protegida no servidor');add('[OK] Conectado ao OpenRouter via Vercel.')}else{setStatus('Conectando ao llama-server local...');const r=await fetch(LOCAL_API+'/models',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();const model=data.data?.[0]?.id||'modelo GGUF';updateConnection(true,'LOCAL ATIVO: '+model+' · use -c 32768 para teste 32K');add('[OK] Conectado ao llama-server local.')}}catch(ex){updateConnection(false,(activeMode==='online'?'Backend online indisponível. Confira OPENROUTER_API_KEY na Vercel.':'Servidor local indisponível. Inicie o llama-server no Termux.'));add('[ERRO] '+(ex.message||ex),'error')}finally{connect.disabled=false;controls()}}
+function decodeSSE(buffer,onPayload){
+ // llama-server pode usar CRLF (\r\n) no SSE; normalize antes de separar eventos.
+ buffer=buffer.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+ let index;
+ while((index=buffer.indexOf('\n\n'))!==-1){
+  const frame=buffer.slice(0,index);buffer=buffer.slice(index+2);
+  for(const row of frame.split('\n'))if(row.startsWith('data: '))onPayload(row.slice(6));
+ }
+ return buffer;
+}
+connect.addEventListener('click',checkServer);
+clear.addEventListener('click',()=>{if(busy)return;history=[system];add('[SESSÃO] Histórico limpo.');input.focus()});
+continueCode.addEventListener('click',()=>{if(!connected||busy||history.length<3)return;input.value='Continue exatamente a partir do ponto onde o código anterior parou. Não repita trechos já enviados; entregue somente a continuação.';document.querySelector('#input-area').requestSubmit()});
+document.querySelectorAll('[data-cmd]').forEach(button=>button.addEventListener('click',()=>{if(!input.disabled){input.value=prompts[button.dataset.cmd];input.focus()}}));
+document.querySelector('#input-area').addEventListener('submit',async event=>{
+ event.preventDefault();const text=input.value.trim();if(!connected||busy||!text)return;
+ const user={role:'user',content:text};input.value='';add('> '+text);const out=add('GUINHO > ','answer');busy=true;controls();setStatus(activeMode==='online'?'Gerando resposta online...':'Gerando resposta no Termux...');controller=new AbortController();let answer='';
+ try{
+  const context=[system,user];
+  const url=activeMode==='online'?ONLINE_API:LOCAL_API+'/chat/completions';
+  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:12000}),signal:controller.signal});
+  if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
+  const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
+  while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const token=event.choices?.[0]?.delta?.content||'';answer+=token;out.textContent='GUINHO > '+answer;term.scrollTop=term.scrollHeight}catch{}})}
+  if(answer){history.push(user,{role:'assistant',content:answer});setStatus((activeMode==='online'?'ONLINE':'LOCAL')+' ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
+ }catch(ex){out.textContent='[ERRO NA GERAÇÃO] '+(ex.name==='AbortError'?'Interrompida.':ex.message||ex);out.classList.add('error');setStatus('Falha de conexão no modo '+activeMode+'.');connected=false}
+ finally{busy=false;controller=null;controls();if(connected)input.focus()}
+});
+controls();
+})();
+</script>
 </body>
 </html>
