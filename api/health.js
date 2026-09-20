@@ -1,8 +1,10 @@
-const MODEL = process.env.OPENROUTER_MODEL || 'qwen/qwen-2.5-coder-32b-instruct';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 export default function handler(req, res) {
-  res.status(process.env.OPENROUTER_API_KEY ? 200 : 500).json({
-    ok: Boolean(process.env.OPENROUTER_API_KEY),
-    model: MODEL
+  const ok = Boolean(process.env.GEMINI_API_KEY);
+  res.status(ok ? 200 : 500).json({
+    ok,
+    model: MODEL,
+    provider: 'google-gemini'
   });
 }
