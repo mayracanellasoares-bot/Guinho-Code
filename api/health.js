@@ -1,10 +1,10 @@
-const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
 
 export default function handler(req, res) {
-  const ok = Boolean(process.env.GROQ_API_KEY);
+  const ok = Boolean(process.env.OPENROUTER_API_KEY);
   res.status(ok ? 200 : 500).json({
     ok,
     model: MODEL,
-    provider: 'groq'
+    provider: 'openrouter'
   });
 }
