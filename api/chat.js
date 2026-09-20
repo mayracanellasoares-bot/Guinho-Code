@@ -1,4 +1,4 @@
-const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+const MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -6,22 +6,22 @@ export default async function handler(req, res) {
     return;
   }
 
-  const key = process.env.DEEPSEEK_API_KEY;
+  const key = process.env.GROQ_API_KEY;
   if (!key) {
-    res.status(500).json({ error: 'Missing DEEPSEEK_API_KEY' });
+    res.status(500).json({ error: 'Missing GROQ_API_KEY' });
     return;
   }
 
   try {
     const body = req.body || {};
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: process.env.DEEPSEEK_MODEL || MODEL,
+        model: process.env.GROQ_MODEL || MODEL,
         messages: Array.isArray(body.messages) ? body.messages : [],
         stream: true,
         temperature: body.temperature ?? 0.45,
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 
     if (!response.ok || !response.body) {
       const error = await response.text();
-      res.status(response.status).send(error || 'DeepSeek request failed');
+      res.status(response.status).send(error || 'Groq request failed');
       return;
     }
 
