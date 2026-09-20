@@ -1,22 +1,33 @@
-# BIT Documentation
+# Guinho-Code Online
 
-A documentação canônica da linguagem está em [BIT-LANGUAGE-REFERENCE.md](./BIT-LANGUAGE-REFERENCE.md).
+Interface terminal retro com dois modos:
 
-A gramática declarativa usada por ferramentas está em [../src/grammar.ts](../src/grammar.ts).
+- Online: Vercel + OpenRouter.
+- Local: Termux + llama.cpp em `127.0.0.1:8080`.
 
-O parser executável é a fonte de verdade operacional. Toda alteração de sintaxe deve atualizar `src/grammar.ts`, esta referência, a biblioteca, exemplos e testes de contrato na mesma alteração.
+## Variaveis na Vercel
 
-A biblioteca padrão está descrita em [../stdlib/README.md](../stdlib/README.md).
+Obrigatoria:
 
-Exemplos executáveis ficam em [../examples](../examples).
+```text
+OPENROUTER_API_KEY=sua_chave
+```
 
-## Modelo de desenvolvimento
+Opcional:
 
-1. Criar um arquivo `jogo.bit` em qualquer editor de texto simples.
-2. Validar o código com o lexer/parser da BIT.
-3. Executar no runtime.
-4. Empacotar o projeto somente quando a linguagem estiver estável.
+```text
+OPENROUTER_MODEL=qwen/qwen-2.5-coder-32b-instruct
+```
 
-## Regra de compatibilidade
+## Teste local
 
-A especificação documenta apenas sintaxe que deve ser tratada como API da linguagem. Novos recursos devem ser adicionados ao lexer, parser, runtime, biblioteca e testes de forma coordenada.
+```bash
+npm i -g vercel
+vercel dev
+```
+
+## Deploy
+
+```bash
+vercel --prod
+```
