@@ -1,4 +1,4 @@
-const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -6,22 +6,24 @@ export default async function handler(req, res) {
     return;
   }
 
-  const key = process.env.GROQ_API_KEY;
+  const key = process.env.OPENROUTER_API_KEY;
   if (!key) {
-    res.status(500).json({ error: 'Missing GROQ_API_KEY' });
+    res.status(500).json({ error: 'Missing OPENROUTER_API_KEY' });
     return;
   }
 
   try {
     const body = req.body || {};
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://guinho-code.vercel.app',
+        'X-Title': 'Guinho Servidor'
       },
       body: JSON.stringify({
-        model: process.env.GROQ_MODEL || MODEL,
+        model: process.env.OPENROUTER_MODEL || MODEL,
         messages: Array.isArray(body.messages) ? body.messages : [],
         stream: true,
         temperature: body.temperature ?? 0.45,
@@ -32,7 +34,7 @@ export default async function handler(req, res) {
 
     if (!response.ok || !response.body) {
       const error = await response.text();
-      res.status(response.status).send(error || 'Groq request failed');
+      res.status(response.status).send(error || 'OpenRouter request failed');
       return;
     }
 
