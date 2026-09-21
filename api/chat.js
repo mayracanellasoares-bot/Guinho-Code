@@ -28,7 +28,7 @@ export default async function handler(req, res) {
         stream: true,
         temperature: body.temperature ?? 0.45,
         top_p: body.top_p ?? 0.9,
-        max_tokens: Math.min(Number(body.max_tokens || 12000), 12000)
+        max_tokens: Math.min(Number(body.max_tokens || 32000), 32000)
       })
     });
 
