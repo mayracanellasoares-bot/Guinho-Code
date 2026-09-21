@@ -61,7 +61,7 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
  try{
   const context=[system,user];
   const url=activeMode==='online'?ONLINE_API:LOCAL_API+'/chat/completions';
-  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:12000}),signal:controller.signal});
+  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});
   if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
   const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
   while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const token=event.choices?.[0]?.delta?.content||'';answer+=token;out.textContent='GUINHO > '+answer;term.scrollTop=term.scrollHeight}catch{}})}
