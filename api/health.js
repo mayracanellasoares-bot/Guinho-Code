@@ -4,7 +4,7 @@ const openRouter = Boolean(process.env.OPENROUTER_API_KEY);
 export default function handler(req, res) {
   const provider = nvidia ? 'nvidia' : openRouter ? 'openrouter' : 'none';
   const model = nvidia
-    ? (process.env.NVIDIA_MODEL || 'z-ai/glm-5.3-flash')
+    ? (process.env.NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b')
     : (process.env.OPENROUTER_MODEL || 'openrouter/free');
   const ok = provider !== 'none';
   res.status(ok ? 200 : 500).json({ ok, provider, model });
