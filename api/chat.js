@@ -25,6 +25,7 @@ export default async function handler(req, res) {
   };
 
   const useOpenRouter = Boolean(openRouterKey);
+  if (useOpenRouter) payload.reasoning = { exclude: true };
   const endpoint = useOpenRouter
     ? 'https://openrouter.ai/api/v1/chat/completions'
     : 'https://integrate.api.nvidia.com/v1/chat/completions';
