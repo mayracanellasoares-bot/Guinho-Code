@@ -65,7 +65,7 @@ function add(text,kind=''){const node=document.createElement('div');node.classNa
 function setStatus(text){status.textContent=text}
 function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
 function updateConnection(ok,message){connected=ok;setStatus(message);controls();if(ok)input.focus()}
-async function checkServer(){connect.disabled=true;setStatus('Conectando ao Guinho Servidor...');try{const r=await fetch('/api/health',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();updateConnection(true,'ONLINE ATIVO: '+data.model+' · chave protegida no servidor');add('[OK] Conectado ao Guinho Servidor.')}catch(ex){updateConnection(false,'Servidor online indisponível. Verifique a Vercel.');add('[ERRO] '+(ex.message||ex),'error')}finally{connect.disabled=false;controls()}}
+async function checkServer(silent=false){connect.disabled=true;if(!silent)setStatus('Conectando ao Guinho Servidor...');try{const r=await fetch('/api/health',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();updateConnection(true,'ONLINE ATIVO: '+data.model+' · chave protegida no servidor');if(!silent)add('[OK] Conectado ao Guinho Servidor.')}catch(ex){updateConnection(false,'Reconectando automaticamente...');if(!silent)add('[ERRO] '+(ex.message||ex),'error')}finally{connect.disabled=false;controls()}}
 function decodeSSE(buffer,onPayload){
  // llama-server pode usar CRLF (\r\n) no SSE; normalize antes de separar eventos.
  buffer=buffer.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
@@ -86,16 +86,17 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
  try{
   const context=[...history,user].slice(-21);
   const url=ONLINE_API;
-  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});
+  let response=null;for(let attempt=0;attempt<3;attempt++){try{response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});if(response.ok&&response.body)break;}catch(error){if(attempt===2)throw error;}if(attempt<2){setStatus('Aguardando o servidor... tentativa '+(attempt+2)+'/3');await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));}}
   if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
   const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
   while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const token=event.choices?.[0]?.delta?.content||'';answer+=token;out.textContent='GUINHO > '+answer;term.scrollTop=term.scrollHeight}catch{}})}
   if(answer){history.push(user,{role:'assistant',content:answer});localStorage.setItem('guinho_history',JSON.stringify(history.slice(1)));setStatus('ONLINE ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
- }catch(ex){out.textContent='[ERRO NA GERAÇÃO] '+(ex.name==='AbortError'?'Interrompida.':ex.message||ex);out.classList.add('error');setStatus('Falha de conexão com o servidor online.');connected=false}
+ }catch(ex){if(ex.name==='AbortError'){out.textContent='[Interrompida]';}else{out.textContent='[Servidor ocupado — tente novamente em instantes]';setStatus('Reconexão automática ativada.');}out.classList.add('error');}
  finally{busy=false;controller=null;controls();input.focus()}
 });
 controls();
 checkServer();
+setInterval(()=>{if(!busy)checkServer(true)},30000);
 })();
 </script>
 </body>
