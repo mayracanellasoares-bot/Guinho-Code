@@ -150,25 +150,36 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
   savedUser={role:'user',content:text+(built.names.length?'\n[Anexos: '+built.names.join(', ')+']':'')};
   const context=[...history,requestUser].slice(-21);
   const url=ONLINE_API;
+  const avoidProviders=new Set();
   let lastError=null;
   for(let attempt=0;attempt<3;attempt++){
    answer='';
    out.textContent='GUINHO > '+(attempt?'[reconectando...]':'[processando...]');
+   let activeProvider='';
    try{
-    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});
-    if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
-    const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
-    const onPayload=payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const delta=event.choices?.[0]?.delta||{};const token=delta.content||'';if(token){answer+=token;out.textContent='GUINHO > '+stripInternalReasoning(answer)}else if(delta.reasoning){out.textContent='GUINHO > [processando...]'}term.scrollTop=term.scrollHeight}catch{}};
+    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,avoidProviders:[...avoidProviders],stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});
+    activeProvider=response.headers.get('x-guinho-provider')||'';
+    if(!response.ok||!response.body){
+      let detail='';
+      try{detail=await response.text()}catch{}
+      const error=new Error('HTTP '+response.status);
+      error.detail=detail.slice(0,300);
+      throw error;
+    }
+    const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='',streamError=null;
+    const onPayload=payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);if(event.error){streamError=new Error(event.error.message||'A fonte interrompeu a resposta');streamError.provider=event.provider||activeProvider;return}const delta=event.choices?.[0]?.delta||{};const token=delta.content||'';if(token){answer+=token;out.textContent='GUINHO > '+stripInternalReasoning(answer)}else if(delta.reasoning){out.textContent='GUINHO > [processando...]'}term.scrollTop=term.scrollHeight}catch{}};
     while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),onPayload)}
     remainder=decodeSSE(remainder+decoder.decode(),onPayload);
+    if(streamError){if(streamError.provider)avoidProviders.add(streamError.provider);throw streamError}
     answer=stripInternalReasoning(answer);
     if(!answer.trim())throw new Error('EMPTY_RESPONSE');
     lastError=null;break;
    }catch(error){
     lastError=error;
+    if(error.provider)avoidProviders.add(error.provider);
     if(error.name==='AbortError')throw error;
     if(attempt===2)throw error;
-    setStatus('Resposta interrompida; reconectando... tentativa '+(attempt+2)+'/3');
+    setStatus('Fonte indisponível; alternando servidor... tentativa '+(attempt+2)+'/3');
     await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
    }
   }
