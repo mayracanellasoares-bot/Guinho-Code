@@ -47,7 +47,7 @@ button:disabled{opacity:.45;cursor:wait}
 <div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button></div><pre class="cat" aria-label="Gatinho ASCII"> /\_/\\
 ( o.o )
  > ^ <</pre>
-<div class="attach-row"><label class="file-label" for="attachments">Anexar documento</label><input id="attachments" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.cs,.xml,.yaml,.yml,.sql,.log,image/*"><span id="attachment-status">nenhum arquivo selecionado</span></div><ul id="file-list" class="file-list" aria-live="polite"></ul>
+<div class="attach-row"><label class="file-label" for="attachments">Anexar documento</label><input id="attachments" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.cs,.xml,.yaml,.yml,.sql,.log"><span id="attachment-status">nenhum arquivo selecionado</span></div><ul id="file-list" class="file-list" aria-live="polite"></ul>
 <div class="title">PROMPTS DE ATALHO:</div>
 <button class="shortcut" data-cmd="/web">/web - HTML/CSS/JS Poda Game</button>
 <button class="shortcut" data-cmd="/canvas">/canvas - Canvas Matrix</button>
@@ -94,8 +94,9 @@ let connected=false,busy=false,controller=null,activeMode='online';
 let savedHistory=[];try{savedHistory=JSON.parse(localStorage.getItem('guinho_history')||'[]');if(!Array.isArray(savedHistory))savedHistory=[]}catch{savedHistory=[]}let history=[system,...savedHistory];
 function renderFiles(){const files=[...fileInput.files];fileList.innerHTML='';attachmentStatus.textContent=files.length?files.length+' arquivo(s) selecionado(s)':'nenhum arquivo selecionado';files.forEach(file=>{const li=document.createElement('li');li.className='file-item';li.textContent=file.name+' ('+Math.ceil(file.size/1024)+' KB)';fileList.append(li)})}
 fileInput.addEventListener('change',renderFiles);
-function readAsDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error('Não foi possível ler '+file.name));reader.readAsDataURL(file)})}
-async function prepareAttachments(files){const parts=[],names=[];let total=0;for(const file of files){if(file.size>MAX_FILE_BYTES)throw new Error(file.name+' excede o limite de 2 MB');if(total+file.size>MAX_TOTAL_BYTES)throw new Error('O total dos anexos não pode exceder 3 MB');total+=file.size;parts.push({type:'file',file:{filename:file.name,file_data:await readAsDataURL(file)}});names.push(file.name)}return {parts,names}}
+let pdfModulePromise=null;
+async function extractPdfText(file){pdfModulePromise??=import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.mjs');const pdfjs=await pdfModulePromise;const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),disableWorker:true}).promise;const pages=[];for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){const page=await pdf.getPage(pageNo);const content=await page.getTextContent();pages.push(content.items.map(item=>item.str||'').join(' '));if(pages.join('\n').length>100000)break}return pages.join('\n')}
+async function prepareAttachments(files){const blocks=[],names=[];let total=0;for(const file of files){if(file.size>MAX_FILE_BYTES)throw new Error(file.name+' excede o limite de 2 MB');if(total+file.size>MAX_TOTAL_BYTES)throw new Error('O total dos anexos não pode exceder 3 MB');total+=file.size;const lower=file.name.toLowerCase();let extracted;if(lower.endsWith('.pdf'))extracted=await extractPdfText(file);else if(/\.(txt|md|csv|json|html|css|js|ts|py|java|c|cpp|h|cs|xml|yaml|yml|sql|log)$/i.test(lower)||file.type.startsWith('text/'))extracted=await file.text();else throw new Error(file.name+': formato não suportado; use PDF, TXT ou arquivo de código');blocks.push('\n\n===== DOCUMENTO: '+file.name+' =====\n'+extracted.slice(0,100000));names.push(file.name)}return {text:blocks.join(''),names}}
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
 function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
@@ -120,7 +121,7 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
  let savedUser={role:'user',content:text};input.value='';add('> '+text+(fileInput.files.length?' · '+[...fileInput.files].map(file=>file.name).join(', '):''));const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta online...');controller=new AbortController();let answer='';
  try{
   const built=await prepareAttachments([...fileInput.files]);
-  const requestUser={role:'user',content:built.parts.length?[{type:'text',text},...built.parts]:text};
+  const requestUser={role:'user',content:text+built.text};
   savedUser={role:'user',content:text+(built.names.length?'\n[Anexos: '+built.names.join(', ')+']':'')};
   const context=[...history,requestUser].slice(-21);
   const url=ONLINE_API;
