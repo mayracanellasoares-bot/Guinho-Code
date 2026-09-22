@@ -49,7 +49,7 @@ button:disabled{opacity:.45;cursor:wait}
 | (_ | | || | | | | ' \  | ' \  / _ \ |___| | (__  / _ \ / _` | / -_)
  \___|  \_,_| |_| |_||_| |_||_| \___/        \___| \___/ \__,_| \___|</pre></div><img class="cat-logo" src="/guinho-logo.svg" alt="Gatinho preto do Guinho-Code"></div>
 <div id="status" class="status">Servidor online · toque em Conectar.</div>
-<div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button><button id="install-pwa" type="button">Instalar PWA</button></div>
+<div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button><button id="knowledge-search" type="button">Buscar base</button><button id="install-pwa" type="button">Instalar PWA</button></div>
 <div class="attach-row"><label class="file-label" for="attachments">Anexar documento</label><input id="attachments" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.cs,.xml,.yaml,.yml,.sql,.log"><span id="attachment-status">nenhum arquivo selecionado</span></div><ul id="file-list" class="file-list" aria-live="polite"></ul>
 <div class="title">PROMPTS DE ATALHO:</div>
 <div class="shortcut-grid">
@@ -84,7 +84,7 @@ button:disabled{opacity:.45;cursor:wait}
 'use strict';
 const ONLINE_API='/api/chat';
 const term=document.querySelector('#terminal'), status=document.querySelector('#status'), input=document.querySelector('#user-input');
-const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send'), installButton=document.querySelector('#install-pwa');
+const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send'), knowledgeButton=document.querySelector('#knowledge-search'), installButton=document.querySelector('#install-pwa');
 const fileInput=document.querySelector('#attachments'), fileList=document.querySelector('#file-list'), attachmentStatus=document.querySelector('#attachment-status');
 const MAX_FILE_BYTES=2*1024*1024, MAX_TOTAL_BYTES=3*1024*1024;
 const system={role:'system',content:`Você é o Guinho-Code, um engenheiro de software sênior, analista de requisitos e arquiteto de soluções. Sua prioridade é compreender corretamente o objetivo do usuário antes de responder e entregar um resultado funcional, verificável e diretamente utilizável.
@@ -120,6 +120,7 @@ BASE DE CONHECIMENTO PRIORITÁRIA:
 6. Para escolher bibliotecas e ecossistemas, considere: Python (NumPy, Pandas, Scikit-learn, TensorFlow, PyTorch, Django, Flask, Selenium, BeautifulSoup), C#/.NET (ASP.NET Core, Entity Framework Core, Unity, Newtonsoft.Json, System.Text.Json), Web (React, Vue, Angular, Tailwind CSS, Bootstrap, GSAP), Canvas/jogos (Three.js, Phaser, PixiJS, Fabric.js), Node.js (Express, Socket.IO, Prisma, Sequelize, Passport) e Java (Spring Boot, Hibernate, JUnit, Mockito, Lombok).
 7. Para bases de respostas de bots, diferencie datasets, frameworks e templates: Kaggle, CoQA, ChatterBot, Rasa, Botpress, Blip e bibliotecas de prompts podem ajudar, mas não substituem uma arquitetura com intents, contexto, fallback e revisão humana quando necessário.
 8. Não finja que consultou essas fontes em tempo real quando não houver navegação externa. Use-as como referências conhecidas e indique quando a resposta depender de verificação atualizada.
+9. Quando precisar de busca técnica no próprio domínio do Guinho, use a rota interna /api/knowledge/search, que pesquisa Wikipédia, Stack Overflow e catálogo curado de MDN, DevDocs, W3Schools, bibliotecas e bots.
 
 FORMATO PADRÃO:
 - Comece pelo resultado ou diagnóstico.
@@ -141,8 +142,37 @@ function addDownloadPanel(answer){const files=parseGeneratedFiles(answer);if(!fi
 function stripInternalReasoning(text){return String(text||'').replace(/<think>[\s\S]*?(?:<\/think>|$)/gi,'').replace(/<analysis>[\s\S]*?(?:<\/analysis>|$)/gi,'').replace(/<reasoning>[\s\S]*?(?:<\/reasoning>|$)/gi,'').trim()}
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
-function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
+function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;knowledgeButton.disabled=busy;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
 function updateConnection(ok,message){connected=ok;setStatus(message);controls();if(ok)input.focus()}
+function formatKnowledgeResults(data){
+ const lines=['[BASE] Busca: '+data.query];
+ const results=Array.isArray(data.results)?data.results:[];
+ if(!results.length)lines.push('Nenhum resultado encontrado nas fontes configuradas.');
+ results.slice(0,10).forEach((item,index)=>{
+  lines.push((index+1)+'. ['+item.source+'] '+item.title);
+  if(item.snippet)lines.push('   '+item.snippet);
+  if(item.url)lines.push('   '+item.url);
+ });
+ if(Array.isArray(data.warnings)&&data.warnings.length)lines.push('Avisos: '+data.warnings.join(' | '));
+ return lines.join('\n');
+}
+async function searchKnowledge(){
+ const query=input.value.trim();
+ if(!query){add('[BASE] Digite primeiro o termo, erro ou biblioteca que quer pesquisar.','error');input.focus();return}
+ busy=true;controls();setStatus('Buscando na base técnica do Guinho...');
+ try{
+  const response=await fetch('/api/knowledge/search?q='+encodeURIComponent(query),{cache:'no-store'});
+  const data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Falha na busca');
+  add(formatKnowledgeResults(data));
+  setStatus('Busca concluída no mesmo domínio.');
+ }catch(error){
+  add('[BASE] Erro na busca: '+(error.message||error),'error');
+  setStatus('Busca indisponível no momento.');
+ }finally{
+  busy=false;controls();input.focus();
+ }
+}
 async function checkServer(silent=false){connect.disabled=true;if(!silent)setStatus('Conectando ao Guinho Servidor...');try{const r=await fetch('/api/health',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();const failover=data.failoverReady?' · failover '+data.providers.length+' fontes':' · failover não configurado';updateConnection(true,'ONLINE ATIVO: '+data.model+failover+' · chave protegida no servidor');if(!silent)add('[OK] Conectado ao Guinho Servidor.')}catch(ex){updateConnection(false,'Reconectando automaticamente...');if(!silent)add('[ERRO] '+(ex.message||ex),'error')}finally{connect.disabled=false;controls()}}
 function decodeSSE(buffer,onPayload){
  // llama-server pode usar CRLF (\r\n) no SSE; normalize antes de separar eventos.
@@ -155,6 +185,7 @@ function decodeSSE(buffer,onPayload){
  return buffer;
 }
 connect.addEventListener('click',checkServer);
+knowledgeButton.addEventListener('click',searchKnowledge);
 clear.addEventListener('click',()=>{if(busy)return;history=[system];localStorage.removeItem('guinho_history');add('[SESSÃO] Histórico limpo.');input.focus()});
 continueCode.addEventListener('click',()=>{if(!connected||busy||history.length<3)return;input.value='Continue exatamente a partir do ponto onde o código anterior parou. Não repita trechos já enviados; entregue somente a continuação.';document.querySelector('#input-area').requestSubmit()});
 document.querySelectorAll('[data-cmd]').forEach(button=>button.addEventListener('click',()=>{if(!busy){input.value=prompts[button.dataset.cmd];input.focus()}}));
