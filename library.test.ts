@@ -17,6 +17,8 @@ describe('Biblioteca do Bit', () => {
     expect(categories.has('cores')).toBe(true);
     expect(categories.has('referencias')).toBe(true);
     expect(categories.has('ecossistemas')).toBe(true);
+    expect(categories.has('jogos')).toBe(true);
+    expect(categories.has('linguistica')).toBe(true);
     expect(categories.has('bots')).toBe(true);
   });
 
