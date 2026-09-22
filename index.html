@@ -3,16 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/guinho-logo.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Guinho-Code">
 <title>GUINHO-CODE · Guinho Servidor</title>
 <style>
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:#fff;color:#000;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+html,body{height:100%;margin:0;background:#fff;color:#000;font:14px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
 body{display:flex;flex-direction:column}
 #terminal{flex:1;min-height:0;overflow:auto;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}
 .box{border:1px solid #000;background:#fff;padding:12px}
 .title{color:#000;font-weight:700}
-.logo{color:#000;white-space:pre;overflow-x:auto;font-size:clamp(8px,1.8vw,12px);line-height:1.08;margin:8px 0}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:92px}.brand-copy{flex:1;min-width:0}.brand-logo{width:88px;height:88px;flex:0 0 auto;object-fit:contain;border:1px solid #000}.logo{color:#000;white-space:pre;overflow-x:auto;font-size:clamp(8px,1.8vw,12px);line-height:1.08;margin:8px 0}
 .status{color:#000;margin:9px 0}
 .line{margin:10px 0;white-space:pre-wrap}
 .answer{color:#000}
@@ -21,7 +25,7 @@ body{display:flex;flex-direction:column}
 button,select{border:1px solid #000;background:#fff;color:#000;padding:7px 9px;font:inherit}
 button{cursor:pointer}
 button:disabled{opacity:.45;cursor:wait}
-.cat{color:#000;text-align:left;font-size:12px;line-height:1.15;margin:8px 0}
+.cat-logo{display:block;width:88px;height:88px;object-fit:contain;border:1px solid #000}.shortcut-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 16px}
 .shortcut{border:0;background:#fff;color:#000;padding:3px 0;display:block;text-align:left}
 .shortcut:hover{text-decoration:underline}
 .attach-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #000;margin-top:10px;padding-top:9px}
@@ -31,29 +35,39 @@ button:disabled{opacity:.45;cursor:wait}
 .file-list{margin:5px 0 0;padding:0;list-style:none}
 .file-item{display:inline-block;border:1px solid #000;padding:2px 5px;margin:2px 4px 2px 0;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
 #input-area{display:flex;gap:8px;align-items:center;min-height:52px;border-top:1px solid #000;padding:5px 9px;padding-bottom:max(5px,env(safe-area-inset-bottom));background:#fff}
-#user-input{flex:1;min-width:0;background:#fff;color:#000;border:0;outline:0;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}
+#user-input{flex:1;min-width:0;background:#fff;color:#000;border:0;outline:0;font:14px ui-monospace,SFMono-Regular,Consolas,monospace}
 #send{color:#000;border-color:#000;background:#fff}
-.downloads{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}.download-button{border:1px solid #000;background:#fff;color:#000;padding:5px 8px;font:inherit;cursor:pointer}
+.downloads{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}.download-button{border:1px solid #000;background:#fff;color:#000;padding:5px 8px;font:inherit;cursor:pointer}@media(max-width:520px){.brand{gap:8px}.brand-logo,.cat-logo{width:66px;height:66px}.shortcut-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <main id="terminal" role="log" aria-live="polite">
 <section class="box">
-<div class="title">GUINHO-CODE v4.0 · GUINHO SERVIDOR</div>
+<div class="brand"><div class="brand-copy"><div class="title">GUINHO-CODE v4.0 · GUINHO SERVIDOR</div>
 <pre class="logo">  ___          _          _                   ___            _
  / __|  _  _  (_)  _ _   | |_    ___   ___   / __|  ___   __| |  ___
 | (_ | | || | | | | ' \  | ' \  / _ \ |___| | (__  / _ \ / _` | / -_)
- \___|  \_,_| |_| |_||_| |_||_| \___/        \___| \___/ \__,_| \___|</pre>
+ \___|  \_,_| |_| |_||_| |_||_| \___/        \___| \___/ \__,_| \___|</pre></div><img class="cat-logo" src="/guinho-logo.svg" alt="Gatinho preto do Guinho-Code"></div>
 <div id="status" class="status">Servidor online · toque em Conectar.</div>
-<div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button></div><pre class="cat" aria-label="Gatinho ASCII"> /\_/\\
-( o.o )
- > ^ <</pre>
+<div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button><button id="install-pwa" type="button">Instalar PWA</button></div>
 <div class="attach-row"><label class="file-label" for="attachments">Anexar documento</label><input id="attachments" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.cs,.xml,.yaml,.yml,.sql,.log"><span id="attachment-status">nenhum arquivo selecionado</span></div><ul id="file-list" class="file-list" aria-live="polite"></ul>
 <div class="title">PROMPTS DE ATALHO:</div>
-<button class="shortcut" data-cmd="/web">/web - HTML/CSS/JS Poda Game</button>
-<button class="shortcut" data-cmd="/canvas">/canvas - Canvas Matrix</button>
-<button class="shortcut" data-cmd="/cpp">/cpp - C++ Retro State</button>
-<button class="shortcut" data-cmd="/csharp">/csharp - C# Movement</button>
+<div class="shortcut-grid">
+<button class="shortcut" data-cmd="/web">/web · jogo web</button>
+<button class="shortcut" data-cmd="/html">/html · página responsiva</button>
+<button class="shortcut" data-cmd="/canvas">/canvas · Canvas 2D</button>
+<button class="shortcut" data-cmd="/game">/game · jogo mobile</button>
+<button class="shortcut" data-cmd="/python">/python · script Python</button>
+<button class="shortcut" data-cmd="/cpp">/cpp · C++</button>
+<button class="shortcut" data-cmd="/csharp">/csharp · C#</button>
+<button class="shortcut" data-cmd="/react">/react · componente</button>
+<button class="shortcut" data-cmd="/api">/api · backend seguro</button>
+<button class="shortcut" data-cmd="/sql">/sql · banco de dados</button>
+<button class="shortcut" data-cmd="/debug">/debug · corrigir erro</button>
+<button class="shortcut" data-cmd="/review">/review · auditoria completa</button>
+<button class="shortcut" data-cmd="/pwa">/pwa · instalar no celular</button>
+<button class="shortcut" data-cmd="/files">/files · gerar arquivos e ZIP</button>
+</div>
 </section>
 </main>
 <form id="input-area"><span>&gt;</span><input id="user-input" type="text" disabled autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Conecte para começar..."/><button id="send" type="submit" disabled>Enviar</button></form>
@@ -63,7 +77,7 @@ button:disabled{opacity:.45;cursor:wait}
 'use strict';
 const ONLINE_API='/api/chat';
 const term=document.querySelector('#terminal'), status=document.querySelector('#status'), input=document.querySelector('#user-input');
-const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send');
+const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send'), installButton=document.querySelector('#install-pwa');
 const fileInput=document.querySelector('#attachments'), fileList=document.querySelector('#file-list'), attachmentStatus=document.querySelector('#attachment-status');
 const MAX_FILE_BYTES=2*1024*1024, MAX_TOTAL_BYTES=3*1024*1024;
 const system={role:'system',content:`Você é o Guinho-Code, um engenheiro de software sênior, analista de requisitos e arquiteto de soluções. Sua prioridade é compreender corretamente o objetivo do usuário antes de responder e entregar um resultado funcional, verificável e diretamente utilizável.
@@ -93,8 +107,8 @@ FORMATO PADRÃO:
 - Em tarefas de implementação, entregue a solução completa.
 - Em tarefas de análise, liste problemas reais por prioridade e proponha correções.
 - Termine com instruções práticas de execução e teste.`};
-const prompts={ '/web':'Crie o jogo Poda em um único arquivo HTML com Canvas, pixels verdes e controles para toque.', '/canvas':'Crie um script Canvas JavaScript para renderizar sprites retrô com malha de pixels.', '/cpp':'Desenvolva uma classe gerenciadora de estados para um jogo em C++.', '/csharp':'Escreva um componente em C# para movimentação baseada em vetores.' };
-let connected=false,busy=false,controller=null,activeMode='online';
+const prompts={ '/web':'Crie um jogo web completo em HTML, CSS e JavaScript, responsivo e jogável no celular.', '/html':'Crie uma página HTML responsiva completa, acessível e sem dependências desnecessárias.', '/canvas':'Crie uma experiência Canvas 2D com loop único, resize correto, controles touch e teclado.', '/game':'Desenvolva um jogo mobile completo em Canvas com estados, colisões, pontuação, pausa e persistência.', '/python':'Escreva um programa Python completo, executável e com tratamento de erros.', '/cpp':'Desenvolva uma solução C++ completa com classes, validação, compilação e exemplo de uso.', '/csharp':'Escreva um componente C# completo com tipos, validação e exemplo de integração.', '/react':'Crie um componente React completo, acessível, responsivo e sem estado inconsistente.', '/api':'Implemente uma API segura com validação, tratamento de erros, variáveis de ambiente e exemplos de chamada.', '/sql':'Modele o banco e escreva SQL completo com tabelas, chaves, índices e consultas de exemplo.', '/debug':'Analise o código enviado, reproduza mentalmente o erro, explique a causa e entregue a correção completa.', '/review':'Faça uma auditoria completa de arquitetura, segurança, performance, acessibilidade e bugs; depois corrija os problemas.', '/pwa':'Transforme o projeto em PWA instalável, com manifest, ícones, service worker e comportamento offline.', '/files':'Gere o projeto completo em blocos ===FILE: nome.ext=== e ===END FILE=== para baixar os arquivos e o ZIP.' };
+let connected=false,busy=false,controller=null,activeMode='online',deferredInstallPrompt=null;
 let savedHistory=[];try{savedHistory=JSON.parse(localStorage.getItem('guinho_history')||'[]');if(!Array.isArray(savedHistory))savedHistory=[]}catch{savedHistory=[]}let history=[system,...savedHistory];
 function renderFiles(){const files=[...fileInput.files];fileList.innerHTML='';attachmentStatus.textContent=files.length?files.length+' arquivo(s) selecionado(s)':'nenhum arquivo selecionado';files.forEach(file=>{const li=document.createElement('li');li.className='file-item';li.textContent=file.name+' ('+Math.ceil(file.size/1024)+' KB)';fileList.append(li)})}
 fileInput.addEventListener('change',renderFiles);
