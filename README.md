@@ -39,6 +39,7 @@ No Android, abra o site no Chrome e use **Instalar aplicativo** quando o navegad
 - anexos PDF, texto e código;
 - blocos `===FILE: nome.ext===` com botões para baixar arquivos individuais ou ZIP;
 - histórico persistido em IndexedDB, exportação em ZIP/JSON/TXT, exclusão local e sincronização opcional em Postgres.
+- biblioteca linguística com análise local por regras em `/api/linguistics/analyze`, cobrindo idioma provável, intenção, palavras-chave e fontes como spaCy, Stanza, Snowball, LanguageTool, Lingua-py, NLTK, CoGrOO e Linguateca.
 
 ## Desenvolvimento
 
