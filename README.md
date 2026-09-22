@@ -45,3 +45,17 @@ vercel dev
 ```
 
 O frontend está em `index.html`; as funções serverless ficam em `api/`.
+
+## Failover automático
+
+O endpoint /api/chat não depende de um único servidor. Ele tenta os provedores configurados em ordem e alterna quando recebe erro HTTP, timeout ou interrupção do stream. Provedores com falhas recentes entram em cooldown temporário para evitar repetir imediatamente uma fonte indisponível.
+
+Variáveis aceitas na Vercel:
+
+- OPENROUTER_API_KEY, OPENROUTER_API_KEY_2, OPENROUTER_API_KEY_3
+- NVIDIA_API_KEY ou NVIDIA_KEY, com sufixos _2 e _3
+- GROQ_API_KEY, com sufixos _2 e _3
+- DEEPSEEK_API_KEY, com sufixos _2 e _3
+- GEMINI_API_KEY ou GOOGLE_API_KEY, com sufixos _2 e _3
+
+Os modelos podem ser definidos com OPENROUTER_MODEL, NVIDIA_MODEL, GROQ_MODEL, DEEPSEEK_MODEL e GEMINI_MODEL. Chaves nunca são enviadas ao navegador nem gravadas no código.
