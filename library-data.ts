@@ -1,6 +1,6 @@
 export interface LibraryItem {
   name: string;
-  category: 'cenario' | 'atores' | 'comportamento' | 'eventos' | 'controle' | 'funcoes' | 'propriedades' | 'cores' | 'referencias' | 'ecossistemas' | 'bots';
+  category: 'cenario' | 'atores' | 'comportamento' | 'eventos' | 'controle' | 'funcoes' | 'propriedades' | 'cores' | 'referencias' | 'ecossistemas' | 'linguistica' | 'bots';
   syntax: string;
   desc: string;
   example: string;
@@ -424,6 +424,36 @@ export const BIT_LIBRARY: LibraryItem[] = [
     syntax: 'Godot, Unity, Unreal, Phaser, Love2D, Bevy',
     desc: 'Opções de engines e frameworks para jogos 2D, 3D, web, mobile e desktop.',
     example: 'Use Godot para 2D/3D leve, Unity para C#, Unreal para 3D avançado, Phaser para web 2D e Bevy para Rust.'
+  },
+
+  // Linguística computacional
+  {
+    name: 'Processamento gramatical multi-idioma',
+    category: 'linguistica',
+    syntax: 'spaCy Models, spaCy Matcher, Stanza Stanford NLP',
+    desc: 'Base para tokenização, entidades, classes gramaticais, dependências sintáticas e regras estruturais em múltiplos idiomas.',
+    example: 'Use spaCy Models para pipelines prontos, spaCy Matcher para regras por padrão linguístico e Stanza para análises tradicionais em idiomas como Mandarim e Russo.'
+  },
+  {
+    name: 'Radicais e correção ortográfica',
+    category: 'linguistica',
+    syntax: 'Snowball Stemmer, LanguageTool',
+    desc: 'Ferramentas para reduzir palavras ao radical e estruturar corretores gramaticais/ortográficos offline em múltiplos idiomas.',
+    example: 'Use Snowball para stemming em Inglês, Espanhol, Alemão, Italiano, Russo e Francês; use LanguageTool como referência de regras de correção.'
+  },
+  {
+    name: 'Detecção offline de idioma',
+    category: 'linguistica',
+    syntax: 'Lingua-py',
+    desc: 'Identifica o idioma provável do texto antes de aplicar regras específicas, útil para bots que atendem em Português, Inglês, Alemão, Russo ou Mandarim.',
+    example: 'Detecte o idioma primeiro; depois escolha regras, prompts e fontes adequadas para aquela língua.'
+  },
+  {
+    name: 'Português - corpus e gramática',
+    category: 'linguistica',
+    syntax: 'NLTK, CoGrOO, Linguateca',
+    desc: 'Recursos para análise, correção e consulta linguística do português, especialmente Português do Brasil.',
+    example: 'Use NLTK para NLP clássico, CoGrOO para correção gramatical brasileira e Linguateca para corpus e dicionários sintáticos.'
   },
 
   // Bases de resposta para bots
