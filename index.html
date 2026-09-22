@@ -162,6 +162,10 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
     if(!response.ok||!response.body){
       let detail='';
       try{detail=await response.text()}catch{}
+      try{
+        const failurePayload=JSON.parse(detail);
+        (failurePayload.providers||[]).forEach(item=>{if(item?.provider)avoidProviders.add(item.provider)});
+      }catch{}
       const error=new Error('HTTP '+response.status);
       error.detail=detail.slice(0,300);
       throw error;
@@ -177,6 +181,7 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
    }catch(error){
     lastError=error;
     if(error.provider)avoidProviders.add(error.provider);
+    else if(activeProvider)avoidProviders.add(activeProvider);
     if(error.name==='AbortError')throw error;
     if(attempt===2)throw error;
     setStatus('Fonte indisponível; alternando servidor... tentativa '+(attempt+2)+'/3');
