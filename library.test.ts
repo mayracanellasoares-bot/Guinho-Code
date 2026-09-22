@@ -15,6 +15,9 @@ describe('Biblioteca do Bit', () => {
     expect(categories.has('funcoes')).toBe(true);
     expect(categories.has('propriedades')).toBe(true);
     expect(categories.has('cores')).toBe(true);
+    expect(categories.has('referencias')).toBe(true);
+    expect(categories.has('ecossistemas')).toBe(true);
+    expect(categories.has('bots')).toBe(true);
   });
 
   it('todos os itens possuem sintaxe, descrição e exemplo válidos', () => {
