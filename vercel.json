@@ -3,5 +3,11 @@
     "api/chat.js": {
       "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/watchdog",
+      "schedule": "0 12 * * *"
+    }
+  ]
 }
