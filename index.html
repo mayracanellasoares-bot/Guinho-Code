@@ -59,12 +59,14 @@ FORMATO PADRÃO:
 - Em tarefas de análise, liste problemas reais por prioridade e proponha correções.
 - Termine com instruções práticas de execução e teste.`};
 const prompts={ '/web':'Crie o jogo Poda em um único arquivo HTML com Canvas, pixels verdes e controles para toque.', '/canvas':'Crie um script Canvas JavaScript para renderizar sprites retrô com malha de pixels.', '/cpp':'Desenvolva uma classe gerenciadora de estados para um jogo em C++.', '/csharp':'Escreva um componente em C# para movimentação baseada em vetores.' };
-let connected=false,busy=false,controller=null,activeMode='online';\nlet savedHistory=[];try{savedHistory=JSON.parse(localStorage.getItem('guinho_history')||'[]');if(!Array.isArray(savedHistory))savedHistory=[]}catch{savedHistory=[]}let history=[system,...savedHistory];
+let connected=false,busy=false,controller=null,activeMode='online';
+let savedHistory=[];try{savedHistory=JSON.parse(localStorage.getItem('guinho_history')||'[]');if(!Array.isArray(savedHistory))savedHistory=[]}catch{savedHistory=[]}let history=[system,...savedHistory];
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
 function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
 function updateConnection(ok,message){connected=ok;setStatus(message);controls();if(ok)input.focus()}
-async function checkServer(){connect.disabled=true;setStatus('Conectando ao Guinho Servidor...');try{const r=await fetch('/api/health',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();updateConnection(true,'ONLINE ATIVO: '+data.model+' · chave protegida no servidor');add('[OK] Conectado ao Guinho Servidor.')}catch(ex){updateConnection(false,'Servidor online indisponível. Verifique a Vercel.');add('[ERRO] '+(ex.message||ex),'error')}finally{connect.disabled=false;controls()}}\nfunction decodeSSE(buffer,onPayload){
+async function checkServer(){connect.disabled=true;setStatus('Conectando ao Guinho Servidor...');try{const r=await fetch('/api/health',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();updateConnection(true,'ONLINE ATIVO: '+data.model+' · chave protegida no servidor');add('[OK] Conectado ao Guinho Servidor.')}catch(ex){updateConnection(false,'Servidor online indisponível. Verifique a Vercel.');add('[ERRO] '+(ex.message||ex),'error')}finally{connect.disabled=false;controls()}}
+function decodeSSE(buffer,onPayload){
  // llama-server pode usar CRLF (\r\n) no SSE; normalize antes de separar eventos.
  buffer=buffer.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
  let index;
