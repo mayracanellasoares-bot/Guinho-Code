@@ -41,6 +41,8 @@ No Android, abra o site no Chrome e use **Instalar aplicativo** quando o navegad
 - histórico persistido em IndexedDB, exportação em ZIP/JSON/TXT, exclusão local e sincronização opcional em Postgres.
 - biblioteca linguística com análise local por regras em `/api/linguistics/analyze`, cobrindo idioma provável, intenção, palavras-chave e fontes como spaCy, Stanza, Snowball, LanguageTool, Lingua-py, NLTK, CoGrOO e Linguateca.
 - biblioteca de jogos com MakeCode Arcade, microStudio, TIC-80, Kenney Assets, OpenGameArt, Itch.io Free Game Assets, Piskel e Pixelorama.
+- modo resiliente: se a IA online estiver lenta ou indisponível, o frontend responde com biblioteca local em vez de exibir apenas "servidor ocupado".
+- keep-alive no GitHub Actions para aquecer rotas leves da Vercel e reduzir cold start.
 
 ## Desenvolvimento
 
