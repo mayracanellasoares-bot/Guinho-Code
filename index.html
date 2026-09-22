@@ -97,6 +97,8 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
 controls();
 checkServer();
 setInterval(()=>{if(!busy)checkServer(true)},30000);
+window.addEventListener('online',()=>{if(!busy)checkServer(true)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!busy)checkServer(true)});
 })();
 </script>
 </body>
