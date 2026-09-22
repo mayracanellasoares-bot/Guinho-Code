@@ -52,6 +52,90 @@ const CATALOG = [
   },
   {
     source: 'catalog',
+    title: 'TypeScript - apps robustos',
+    url: 'https://www.typescriptlang.org/docs/',
+    keywords: ['typescript', 'ts', 'zod', 'trpc', 'tanstack', 'vite', 'vitest', 'next'],
+    snippet: 'TypeScript para tipagem, Zod para validacao, tRPC para APIs tipadas, TanStack Query para dados, Vite para build e Vitest para testes.'
+  },
+  {
+    source: 'catalog',
+    title: 'Mobile - Android, iOS e apps hibridos',
+    url: 'https://reactnative.dev/',
+    keywords: ['mobile', 'android', 'ios', 'react native', 'expo', 'flutter', 'kotlin', 'swift'],
+    snippet: 'React Native/Expo para apps JavaScript, Flutter para UI multiplataforma, Kotlin para Android nativo e Swift para iOS nativo.'
+  },
+  {
+    source: 'catalog',
+    title: 'IA e automacao com LLMs',
+    url: 'https://huggingface.co/docs',
+    keywords: ['ia', 'ai', 'llm', 'langchain', 'llamaindex', 'hugging face', 'openai', 'ollama', 'spacy'],
+    snippet: 'OpenAI SDK para modelos via API, LangChain/LlamaIndex para RAG e agentes, Hugging Face Transformers para modelos, Ollama para local e spaCy para NLP.'
+  },
+  {
+    source: 'catalog',
+    title: 'Bancos de dados e busca',
+    url: 'https://www.postgresql.org/docs/',
+    keywords: ['database', 'banco', 'sql', 'postgres', 'postgresql', 'sqlite', 'redis', 'prisma', 'drizzle', 'elasticsearch', 'meilisearch'],
+    snippet: 'PostgreSQL para dados relacionais, SQLite para local, Redis para cache/fila, Prisma/Drizzle para ORM e Elasticsearch/Meilisearch para busca.'
+  },
+  {
+    source: 'catalog',
+    title: 'Testes e qualidade',
+    url: 'https://playwright.dev/',
+    keywords: ['teste', 'testes', 'qa', 'playwright', 'cypress', 'jest', 'vitest', 'testing library', 'eslint', 'prettier'],
+    snippet: 'Playwright/Cypress para testes end-to-end, Jest/Vitest para unidade, Testing Library para UI, ESLint/Prettier para qualidade e padronizacao.'
+  },
+  {
+    source: 'catalog',
+    title: 'Seguranca de aplicacoes',
+    url: 'https://owasp.org/www-project-top-ten/',
+    keywords: ['seguranca', 'security', 'owasp', 'helmet', 'bcrypt', 'argon2', 'jose', 'jwt', 'rate limit', 'zod'],
+    snippet: 'OWASP Top 10 como referencia, Helmet para headers, bcrypt/argon2 para senhas, jose/JWT para tokens, Zod para validacao e rate limiting contra abuso.'
+  },
+  {
+    source: 'catalog',
+    title: 'DevOps e deploy',
+    url: 'https://docs.github.com/actions',
+    keywords: ['devops', 'deploy', 'docker', 'kubernetes', 'terraform', 'github actions', 'vercel', 'nginx', 'ci', 'cd'],
+    snippet: 'Docker para empacotar, GitHub Actions para CI/CD, Vercel para web/serverless, Terraform para infraestrutura, Kubernetes para orquestracao e Nginx como proxy.'
+  },
+  {
+    source: 'catalog',
+    title: 'Desktop multiplataforma',
+    url: 'https://www.electronjs.org/docs/latest/',
+    keywords: ['desktop', 'electron', 'tauri', 'pyside', 'qt', 'maui', '.net maui'],
+    snippet: 'Electron para desktop com web stack, Tauri para binarios menores, PySide/Qt para Python desktop e .NET MAUI para C# multiplataforma.'
+  },
+  {
+    source: 'catalog',
+    title: 'Go - APIs e ferramentas',
+    url: 'https://go.dev/doc/',
+    keywords: ['go', 'golang', 'gin', 'fiber', 'gorm', 'cobra', 'grpc', 'api'],
+    snippet: 'Gin/Fiber para APIs, GORM para ORM, Cobra para CLIs e gRPC para servicos de alta performance.'
+  },
+  {
+    source: 'catalog',
+    title: 'Rust - performance e sistemas',
+    url: 'https://doc.rust-lang.org/',
+    keywords: ['rust', 'tokio', 'axum', 'actix', 'serde', 'tauri', 'bevy'],
+    snippet: 'Tokio para async, Axum/Actix para web, Serde para serializacao, Tauri para desktop e Bevy para jogos.'
+  },
+  {
+    source: 'catalog',
+    title: 'PHP - web tradicional e APIs',
+    url: 'https://www.php.net/docs.php',
+    keywords: ['php', 'laravel', 'symfony', 'composer', 'phpunit', 'wordpress'],
+    snippet: 'Laravel para web moderna, Symfony para componentes corporativos, Composer para pacotes, PHPUnit para testes e WordPress para CMS.'
+  },
+  {
+    source: 'catalog',
+    title: 'Motores de jogos',
+    url: 'https://docs.godotengine.org/',
+    keywords: ['jogos', 'games', 'godot', 'unity', 'unreal', 'love2d', 'phaser', 'bevy'],
+    snippet: 'Godot para 2D/3D leve, Unity para C#, Unreal para 3D AAA, Love2D para Lua, Phaser para web 2D e Bevy para Rust.'
+  },
+  {
+    source: 'catalog',
     title: 'Bots - intents, respostas e fallback',
     url: 'https://rasa.com/docs/',
     keywords: ['bot', 'chatbot', 'intent', 'intents', 'respostas', 'fallback', 'rasa', 'botpress', 'chatterbot'],
@@ -162,7 +246,7 @@ function searchCatalog(query) {
     })
     .filter(entry => entry.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
+    .slice(0, 10)
     .map(({ item, score }) => ({
       source: SOURCE_LABELS.catalog,
       kind: 'curated',
