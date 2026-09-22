@@ -1,4 +1,5 @@
-const MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
+const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.1-8b-instruct';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -6,35 +7,49 @@ export default async function handler(req, res) {
     return;
   }
 
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) {
-    res.status(500).json({ error: 'Missing OPENROUTER_API_KEY' });
+  const nvidiaKey = process.env.NVIDIA_API_KEY || process.env.NVIDIA_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  if (!nvidiaKey && !openRouterKey) {
+    res.status(500).json({ error: 'Missing NVIDIA_API_KEY or OPENROUTER_API_KEY' });
     return;
   }
 
+  const body = req.body || {};
+  const payload = {
+    model: nvidiaKey ? NVIDIA_MODEL : OPENROUTER_MODEL,
+    messages: Array.isArray(body.messages) ? body.messages : [],
+    stream: true,
+    temperature: body.temperature ?? 0.45,
+    top_p: body.top_p ?? 0.9,
+    max_tokens: Math.min(Number(body.max_tokens || 32000), 32000)
+  };
+
+  const endpoint = nvidiaKey
+    ? 'https://integrate.api.nvidia.com/v1/chat/completions'
+    : 'https://openrouter.ai/api/v1/chat/completions';
+  const key = nvidiaKey || openRouterKey;
+  const headers = {
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json'
+  };
+  if (!nvidiaKey) {
+    headers['HTTP-Referer'] = 'https://guinho-code.vercel.app';
+    headers['X-Title'] = 'Guinho Servidor';
+  }
+
   try {
-    const body = req.body || {};
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://guinho-code.vercel.app',
-        'X-Title': 'Guinho Servidor'
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || MODEL,
-        messages: Array.isArray(body.messages) ? body.messages : [],
-        stream: true,
-        temperature: body.temperature ?? 0.45,
-        top_p: body.top_p ?? 0.9,
-        max_tokens: Math.min(Number(body.max_tokens || 32000), 32000)
-      })
+      headers,
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok || !response.body) {
       const error = await response.text();
-      res.status(response.status).send(error || 'OpenRouter request failed');
+      res.status(response.status).json({
+        error: nvidiaKey ? 'NVIDIA request failed' : 'OpenRouter request failed',
+        details: error.slice(0, 1000)
+      });
       return;
     }
 
