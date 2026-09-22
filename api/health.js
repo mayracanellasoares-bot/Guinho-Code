@@ -1,11 +1,31 @@
-const nvidia = Boolean(process.env.NVIDIA_API_KEY || process.env.NVIDIA_KEY);
-const openRouter = Boolean(process.env.OPENROUTER_API_KEY);
+function family(keys, id, name, modelEnv, fallbackModel) {
+  const values = [...new Set(keys.flatMap(key => [
+    process.env[key],
+    process.env[key + '_2'],
+    process.env[key + '_3']
+  ].filter(Boolean)))];
+  return values.map((_, index) => ({
+    id: id + '-' + (index + 1),
+    name,
+    model: process.env[modelEnv + (index ? '_' + (index + 1) : '')] || process.env[modelEnv] || fallbackModel
+  }));
+}
 
 export default function handler(req, res) {
-  const provider = openRouter ? 'openrouter' : nvidia ? 'nvidia' : 'none';
-  const model = openRouter
-    ? (process.env.OPENROUTER_MODEL || 'openrouter/free')
-    : (process.env.NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b');
-  const ok = provider !== 'none';
-  res.status(ok ? 200 : 500).json({ ok, provider, model });
+  const providers = [
+    ...family(['OPENROUTER_API_KEY'], 'openrouter', 'OpenRouter', 'OPENROUTER_MODEL', 'openrouter/free'),
+    ...family(['NVIDIA_API_KEY', 'NVIDIA_KEY'], 'nvidia', 'NVIDIA', 'NVIDIA_MODEL', 'nvidia/nemotron-3.5-lightning-30b-a3b'),
+    ...family(['GROQ_API_KEY'], 'groq', 'Groq', 'GROQ_MODEL', 'llama-3.3-70b-versatile'),
+    ...family(['DEEPSEEK_API_KEY'], 'deepseek', 'DeepSeek', 'DEEPSEEK_MODEL', 'deepseek-chat'),
+    ...family(['GEMINI_API_KEY', 'GOOGLE_API_KEY'], 'gemini', 'Gemini', 'GEMINI_MODEL', 'gemini-2.0-flash')
+  ];
+  const primary = providers[0];
+  const ok = providers.length > 0;
+  res.status(ok ? 200 : 500).json({
+    ok,
+    provider: primary?.name || 'none',
+    model: primary?.model || null,
+    providers: providers.map(({ id, name, model }) => ({ id, name, model })),
+    failoverReady: providers.length > 1
+  });
 }
