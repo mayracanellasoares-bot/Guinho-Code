@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
   const payload = {
-    model: nvidiaKey ? NVIDIA_MODEL : OPENROUTER_MODEL,
+    model: openRouterKey ? OPENROUTER_MODEL : NVIDIA_MODEL,
     messages: Array.isArray(body.messages) ? body.messages : [],
     stream: true,
     temperature: body.temperature ?? 0.45,
@@ -24,15 +24,16 @@ export default async function handler(req, res) {
     max_tokens: Math.min(Number(body.max_tokens || 32000), 32000)
   };
 
-  const endpoint = nvidiaKey
-    ? 'https://integrate.api.nvidia.com/v1/chat/completions'
-    : 'https://openrouter.ai/api/v1/chat/completions';
-  const key = nvidiaKey || openRouterKey;
+  const useOpenRouter = Boolean(openRouterKey);
+  const endpoint = useOpenRouter
+    ? 'https://openrouter.ai/api/v1/chat/completions'
+    : 'https://integrate.api.nvidia.com/v1/chat/completions';
+  const key = useOpenRouter ? openRouterKey : nvidiaKey;
   const headers = {
     Authorization: `Bearer ${key}`,
     'Content-Type': 'application/json'
   };
-  if (!nvidiaKey) {
+  if (useOpenRouter) {
     headers['HTTP-Referer'] = 'https://guinho-code.vercel.app';
     headers['X-Title'] = 'Guinho Servidor';
   }
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
     if (!response.ok || !response.body) {
       const error = await response.text();
       res.status(response.status).json({
-        error: nvidiaKey ? 'NVIDIA request failed' : 'OpenRouter request failed',
+        error: useOpenRouter ? 'OpenRouter request failed' : 'NVIDIA request failed',
         details: error.slice(0, 1000)
       });
       return;
