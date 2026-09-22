@@ -59,7 +59,7 @@ FORMATO PADRÃO:
 - Em tarefas de análise, liste problemas reais por prioridade e proponha correções.
 - Termine com instruções práticas de execução e teste.`};
 const prompts={ '/web':'Crie o jogo Poda em um único arquivo HTML com Canvas, pixels verdes e controles para toque.', '/canvas':'Crie um script Canvas JavaScript para renderizar sprites retrô com malha de pixels.', '/cpp':'Desenvolva uma classe gerenciadora de estados para um jogo em C++.', '/csharp':'Escreva um componente em C# para movimentação baseada em vetores.' };
-let connected=false,busy=false,controller=null,activeMode='online';\nlet history=[system,...JSON.parse(localStorage.getItem('guinho_history')||'[]')];
+let connected=false,busy=false,controller=null,activeMode='online';\nlet savedHistory=[];try{savedHistory=JSON.parse(localStorage.getItem('guinho_history')||'[]');if(!Array.isArray(savedHistory))savedHistory=[]}catch{savedHistory=[]}let history=[system,...savedHistory];
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
 function controls(){input.disabled=!connected||busy;send.disabled=input.disabled;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
@@ -82,8 +82,8 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
  event.preventDefault();const text=input.value.trim();if(!connected||busy||!text)return;
  const user={role:'user',content:text};input.value='';add('> '+text);const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta online...');controller=new AbortController();let answer='';
  try{
-  const context=[system,user];
-  const url=activeMode==='online'?ONLINE_API:LOCAL_API+'/chat/completions';
+  const context=[...history,user].slice(-21);
+  const url=ONLINE_API;
   const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});
   if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
   const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
