@@ -1,4 +1,4 @@
-const CACHE_NAME='guinho-code-shell-v1';
+const CACHE_NAME='guinho-code-shell-v2';
 const SHELL=['/','/index.html','/manifest.webmanifest','/guinho-logo.svg'];
 
 self.addEventListener('install',event=>{
@@ -13,16 +13,26 @@ self.addEventListener('fetch',event=>{
   const request=event.request;
   const url=new URL(request.url);
   if(request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/'))return;
-  event.respondWith(
-    caches.match(request).then(cached=>{
-      const network=fetch(request).then(response=>{
+  const isDocument=request.mode==='navigate'||url.pathname==='/'||url.pathname==='/index.html';
+  if(isDocument){
+    event.respondWith(
+      fetch(request).then(response=>{
         if(response.ok){
           const copy=response.clone();
-          caches.open(CACHE_NAME).then(cache=>cache.put(request,copy));
+          caches.open(CACHE_NAME).then(cache=>cache.put('/index.html',copy));
         }
         return response;
-      }).catch(()=>cached||caches.match('/index.html'));
-      return cached||network;
-    })
+      }).catch(()=>caches.match(request).then(cached=>cached||caches.match('/index.html')))
+    );
+    return;
+  }
+  event.respondWith(
+    caches.match(request).then(cached=>cached||fetch(request).then(response=>{
+      if(response.ok){
+        const copy=response.clone();
+        caches.open(CACHE_NAME).then(cache=>cache.put(request,copy));
+      }
+      return response;
+    }))
   );
 });
