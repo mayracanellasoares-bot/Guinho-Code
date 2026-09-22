@@ -136,6 +136,34 @@ const CATALOG = [
   },
   {
     source: 'catalog',
+    title: 'Linguistica computacional - spaCy e Stanza',
+    url: 'https://spacy.io/models',
+    keywords: ['linguistica', 'nlp', 'spacy', 'matcher', 'stanza', 'stanford', 'mandarim', 'russo', 'gramatica', 'sintaxe'],
+    snippet: 'spaCy Models e Matcher para regras e estruturas gramaticais; Stanza/Stanford NLP para analise linguistica tradicional com boa cobertura multi-idioma.'
+  },
+  {
+    source: 'catalog',
+    title: 'Radicais e correcao - Snowball e LanguageTool',
+    url: 'https://snowballstem.org/',
+    keywords: ['snowball', 'stemmer', 'stemming', 'radical', 'languagetool', 'correcao', 'ortografia', 'gramatica', 'alemao', 'frances', 'ingles', 'russo'],
+    snippet: 'Snowball reduz palavras ao radical em varios idiomas; LanguageTool oferece base de regras para corretores gramaticais e ortograficos offline.'
+  },
+  {
+    source: 'catalog',
+    title: 'Deteccao offline de idioma - Lingua-py',
+    url: 'https://github.com/pemistahl/lingua-py',
+    keywords: ['lingua', 'lingua-py', 'detectar idioma', 'idioma offline', 'language detection', 'mandarim', 'russo', 'alemao'],
+    snippet: 'Lingua-py detecta idioma localmente antes de aplicar regras especificas por lingua, util para bots multi-idioma sem depender de API externa.'
+  },
+  {
+    source: 'catalog',
+    title: 'Portugues - NLTK, CoGrOO e Linguateca',
+    url: 'https://www.linguateca.pt/',
+    keywords: ['portugues', 'pt-br', 'nltk', 'cogroo', 'linguateca', 'corretor', 'corpus', 'dicionario', 'sintatico'],
+    snippet: 'NLTK para ferramentas classicas de NLP, CoGrOO para correcao gramatical do portugues brasileiro e Linguateca para corpus e recursos sintaticos.'
+  },
+  {
+    source: 'catalog',
     title: 'Bots - intents, respostas e fallback',
     url: 'https://rasa.com/docs/',
     keywords: ['bot', 'chatbot', 'intent', 'intents', 'respostas', 'fallback', 'rasa', 'botpress', 'chatterbot'],
