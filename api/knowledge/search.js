@@ -136,6 +136,27 @@ const CATALOG = [
   },
   {
     source: 'catalog',
+    title: 'Plataformas abertas para prototipos de jogos',
+    url: 'https://arcade.makecode.com/',
+    keywords: ['makecode', 'makecode arcade', 'microstudio', 'tic-80', 'tic80', 'fantasy console', 'python', 'javascript', 'pixel art', 'prototipo', 'movimentacao'],
+    snippet: 'MakeCode Arcade para prototipos em Python/JS com arte nativa; microStudio para codigo e pixel art integrados; TIC-80 para jogos retro com sprites e mapas.'
+  },
+  {
+    source: 'catalog',
+    title: 'Assets gratuitos para jogos',
+    url: 'https://kenney.nl/assets',
+    keywords: ['kenney', 'opengameart', 'itch.io', 'free game assets', 'assets', 'sprites', 'tileset', 'audio', 'cc0', 'cenario', 'ui'],
+    snippet: 'Kenney oferece pacotes CC0; OpenGameArt tem comunidade aberta de sprites/cenarios/efeitos; Itch.io Free Game Assets tem tilesets e pacotes independentes.'
+  },
+  {
+    source: 'catalog',
+    title: 'Editores gratuitos de sprites',
+    url: 'https://www.piskelapp.com/',
+    keywords: ['piskel', 'pixelorama', 'sprite', 'spritesheet', 'pixel art', 'animacao', 'camadas', 'personagem', 'movimento'],
+    snippet: 'Piskel e focado em animacao quadro a quadro e folhas de sprites; Pixelorama e open-source, com camadas, animacao e fluxo mais completo de pixel art.'
+  },
+  {
+    source: 'catalog',
     title: 'Linguistica computacional - spaCy e Stanza',
     url: 'https://spacy.io/models',
     keywords: ['linguistica', 'nlp', 'spacy', 'matcher', 'stanza', 'stanford', 'mandarim', 'russo', 'gramatica', 'sintaxe'],
