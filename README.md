@@ -13,9 +13,12 @@ Variáveis esperadas na Vercel:
 ```text
 OPENROUTER_API_KEY=sua_chave
 OPENROUTER_MODEL=openrouter/free
+DATABASE_URL=postgresql://usuario:senha@host/database?sslmode=require
 ```
 
 O endpoint `/api/chat` transmite a resposta por SSE, exclui o raciocínio interno do provedor e tenta reconectar quando a geração é interrompida.
+
+`DATABASE_URL` é opcional. Sem ela, o histórico fica salvo no navegador por IndexedDB. Com ela, `/api/history` cria a tabela `guinho_chat_history` automaticamente e sincroniza as conversas por ID anônimo, sem cadastro, email ou senha.
 
 ## PWA
 
@@ -35,7 +38,7 @@ No Android, abra o site no Chrome e use **Instalar aplicativo** quando o navegad
 - atalhos para HTML, Canvas, jogos, Python, C++, C#, React, API, SQL, depuração, auditoria, PWA e arquivos;
 - anexos PDF, texto e código;
 - blocos `===FILE: nome.ext===` com botões para baixar arquivos individuais ou ZIP;
-- histórico persistido no armazenamento local do navegador.
+- histórico persistido em IndexedDB, exportação em ZIP/JSON/TXT, exclusão local e sincronização opcional em Postgres.
 
 ## Desenvolvimento
 
