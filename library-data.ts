@@ -341,6 +341,90 @@ export const BIT_LIBRARY: LibraryItem[] = [
     desc: 'Ecossistema corporativo robusto para APIs, microsserviços, persistência, testes e redução de código repetitivo.',
     example: 'Use Spring Boot para aplicações web, Hibernate para ORM, JUnit/Mockito para testes e Lombok para reduzir boilerplate.'
   },
+  {
+    name: 'TypeScript - Aplicações robustas',
+    category: 'ecossistemas',
+    syntax: 'TypeScript, Zod, tRPC, TanStack Query, Vite, Vitest, Next.js',
+    desc: 'Ecossistema para aplicações web com tipagem, validação, build rápido, testes e APIs mais seguras.',
+    example: 'Use TypeScript para tipagem, Zod para validação, TanStack Query para dados, Vite para build e Vitest para testes.'
+  },
+  {
+    name: 'Mobile - Android e iOS',
+    category: 'ecossistemas',
+    syntax: 'React Native, Expo, Flutter, Kotlin, Swift',
+    desc: 'Opções para criar aplicativos móveis nativos ou multiplataforma, com diferentes custos de manutenção.',
+    example: 'Use Expo para app mobile rápido com JavaScript, Flutter para UI multiplataforma, Kotlin para Android nativo e Swift para iOS nativo.'
+  },
+  {
+    name: 'IA e agentes',
+    category: 'ecossistemas',
+    syntax: 'OpenAI SDK, LangChain, LlamaIndex, Hugging Face, Ollama, spaCy',
+    desc: 'Bibliotecas para modelos de linguagem, RAG, agentes, automação, NLP e execução local de modelos.',
+    example: 'Use OpenAI SDK para API, LangChain/LlamaIndex para RAG, Hugging Face para modelos, Ollama para local e spaCy para NLP.'
+  },
+  {
+    name: 'Banco de dados e busca',
+    category: 'ecossistemas',
+    syntax: 'PostgreSQL, SQLite, Redis, Prisma, Drizzle, Elasticsearch, Meilisearch',
+    desc: 'Camada de persistência, cache, ORM e busca textual para aplicações reais.',
+    example: 'Use PostgreSQL para dados principais, Redis para cache/fila, Prisma ou Drizzle para ORM e Meilisearch/Elasticsearch para busca.'
+  },
+  {
+    name: 'Testes e qualidade',
+    category: 'ecossistemas',
+    syntax: 'Playwright, Cypress, Jest, Vitest, Testing Library, ESLint, Prettier',
+    desc: 'Ferramentas para testes end-to-end, unitários, componentes, lint e padronização de código.',
+    example: 'Use Playwright para fluxo real no navegador, Vitest/Jest para unidade, Testing Library para UI e ESLint/Prettier para qualidade.'
+  },
+  {
+    name: 'Segurança de aplicações',
+    category: 'ecossistemas',
+    syntax: 'OWASP, Helmet, bcrypt, argon2, jose, JWT, rate limiting, Zod',
+    desc: 'Base para autenticação, validação, headers seguros, tokens, hash de senha e proteção contra abuso.',
+    example: 'Use OWASP como checklist, Helmet para headers, argon2/bcrypt para senhas, jose para JWT e rate limit para endpoints sensíveis.'
+  },
+  {
+    name: 'DevOps e deploy',
+    category: 'ecossistemas',
+    syntax: 'Docker, GitHub Actions, Vercel, Terraform, Kubernetes, Nginx',
+    desc: 'Ferramentas para empacotamento, CI/CD, deploy, infraestrutura e operação de aplicações.',
+    example: 'Use GitHub Actions para CI/CD, Vercel para web/serverless, Docker para empacotar e Terraform/Kubernetes quando houver infraestrutura maior.'
+  },
+  {
+    name: 'Desktop multiplataforma',
+    category: 'ecossistemas',
+    syntax: 'Electron, Tauri, PySide, Qt, .NET MAUI',
+    desc: 'Opções para criar aplicativos desktop com web stack, Rust, Python ou C#.',
+    example: 'Use Electron para compatibilidade web, Tauri para binário menor, PySide/Qt para Python desktop e .NET MAUI para C#.'
+  },
+  {
+    name: 'Go - APIs e ferramentas',
+    category: 'ecossistemas',
+    syntax: 'Go, Gin, Fiber, GORM, Cobra, gRPC',
+    desc: 'Ecossistema eficiente para APIs, serviços, CLIs e sistemas de alta performance.',
+    example: 'Use Gin/Fiber para APIs, GORM para banco, Cobra para CLI e gRPC para comunicação entre serviços.'
+  },
+  {
+    name: 'Rust - performance e segurança',
+    category: 'ecossistemas',
+    syntax: 'Rust, Tokio, Axum, Actix Web, Serde, Tauri, Bevy',
+    desc: 'Ecossistema para aplicações performáticas, seguras, assíncronas, desktop e jogos.',
+    example: 'Use Tokio para async, Axum/Actix para web, Serde para serialização, Tauri para desktop e Bevy para jogos.'
+  },
+  {
+    name: 'PHP - Web e CMS',
+    category: 'ecossistemas',
+    syntax: 'PHP, Laravel, Symfony, Composer, PHPUnit, WordPress',
+    desc: 'Ecossistema tradicional e ainda forte para sites, APIs, CMS e sistemas web.',
+    example: 'Use Laravel para produtividade, Symfony para componentes corporativos, Composer para pacotes e PHPUnit para testes.'
+  },
+  {
+    name: 'Motores de jogos',
+    category: 'ecossistemas',
+    syntax: 'Godot, Unity, Unreal, Phaser, Love2D, Bevy',
+    desc: 'Opções de engines e frameworks para jogos 2D, 3D, web, mobile e desktop.',
+    example: 'Use Godot para 2D/3D leve, Unity para C#, Unreal para 3D avançado, Phaser para web 2D e Bevy para Rust.'
+  },
 
   // Bases de resposta para bots
   {
