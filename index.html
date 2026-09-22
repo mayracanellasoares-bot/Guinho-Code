@@ -56,7 +56,7 @@ button:disabled{opacity:.45;cursor:wait}
 | (_ | | || | | | | ' \  | ' \  / _ \ |___| | (__  / _ \ / _` | / -_)
  \___|  \_,_| |_| |_||_| |_||_| \___/        \___| \___/ \__,_| \___|</pre></div><img class="cat-logo" src="/guinho-logo.svg" alt="Gatinho preto do Guinho-Code"></div>
 <div id="status" class="status">Servidor online · toque em Conectar.</div>
-<div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button><button id="history-toggle" type="button">Histórico</button><button id="export-history" type="button">Exportar</button><button id="delete-history" type="button">Apagar histórico</button><button id="knowledge-search" type="button">Buscar base</button><button id="install-pwa" type="button">Instalar PWA</button></div>
+<div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button><button id="history-toggle" type="button">Histórico</button><button id="export-history" type="button">Exportar</button><button id="delete-history" type="button">Apagar histórico</button><button id="knowledge-search" type="button">Buscar base</button><button id="linguistic-analyze" type="button">Linguística</button><button id="install-pwa" type="button">Instalar PWA</button></div>
 <div class="attach-row"><label class="file-label" for="attachments">Anexar documento</label><input id="attachments" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.cs,.xml,.yaml,.yml,.sql,.log"><span id="attachment-status">nenhum arquivo selecionado</span></div><ul id="file-list" class="file-list" aria-live="polite"></ul>
 <div id="history-panel" class="history-panel" hidden><div class="history-actions"><span class="title">CONVERSAS SALVAS</span><span id="history-status" class="history-status">carregando histórico local...</span></div><div id="conversation-list" class="conversation-list" aria-live="polite"></div></div>
 <div class="title">PROMPTS DE ATALHO:</div>
@@ -82,6 +82,7 @@ button:disabled{opacity:.45;cursor:wait}
 <button class="shortcut" data-cmd="/devdocs">/devdocs · docs offline</button>
 <button class="shortcut" data-cmd="/libs">/libs · bibliotecas famosas</button>
 <button class="shortcut" data-cmd="/botbase">/botbase · respostas de bot</button>
+<button class="shortcut" data-cmd="/linguistica">/linguistica · NLP idiomas</button>
 <button class="shortcut" data-cmd="/typescript">/typescript · TS robusto</button>
 <button class="shortcut" data-cmd="/mobile">/mobile · Android/iOS</button>
 <button class="shortcut" data-cmd="/ai">/ai · IA e agentes</button>
@@ -104,7 +105,7 @@ button:disabled{opacity:.45;cursor:wait}
 'use strict';
 const ONLINE_API='/api/chat';
 const term=document.querySelector('#terminal'), status=document.querySelector('#status'), input=document.querySelector('#user-input');
-const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send'), knowledgeButton=document.querySelector('#knowledge-search'), installButton=document.querySelector('#install-pwa');
+const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send'), knowledgeButton=document.querySelector('#knowledge-search'), linguisticButton=document.querySelector('#linguistic-analyze'), installButton=document.querySelector('#install-pwa');
 const historyToggle=document.querySelector('#history-toggle'), exportHistory=document.querySelector('#export-history'), deleteHistory=document.querySelector('#delete-history'), historyPanel=document.querySelector('#history-panel'), historyStatus=document.querySelector('#history-status'), conversationList=document.querySelector('#conversation-list');
 const fileInput=document.querySelector('#attachments'), fileList=document.querySelector('#file-list'), attachmentStatus=document.querySelector('#attachment-status');
 const MAX_FILE_BYTES=2*1024*1024, MAX_TOTAL_BYTES=3*1024*1024, MAX_LOCAL_CONVERSATIONS=30, MAX_SAVED_MESSAGES=80;
@@ -145,12 +146,21 @@ BASE DE CONHECIMENTO PRIORITÁRIA:
 9. Quando precisar de busca técnica no próprio domínio do Guinho, use a rota interna /api/knowledge/search, que pesquisa Wikipédia, Stack Overflow e catálogo curado de MDN, DevDocs, W3Schools, bibliotecas e bots.
 10. Ao recomendar bibliotecas, escolha por objetivo real: produção, simplicidade, mobile, jogo, IA, segurança, teste, banco, deploy ou manutenção. Explique a escolha e evite empilhar bibliotecas sem necessidade.
 
+BIBLIOTECA LINGUÍSTICA:
+1. Para regras gramaticais e estruturais multi-idioma, considere spaCy Models Directory e spaCy Matcher.
+2. Para Mandarim, Russo e análises linguísticas tradicionais de alta precisão, considere Stanza Stanford NLP.
+3. Para radicais e stemming em Inglês, Espanhol, Alemão, Italiano, Russo e Francês, considere Snowball Stemmer.
+4. Para correção ortográfica e gramatical offline, considere LanguageTool Development Wiki.
+5. Para detecção offline de idioma, considere Lingua-py.
+6. Para Português, considere NLTK, CoGrOO e Linguateca.
+7. Use a rota local /api/linguistics/analyze como apoio de idioma, intenção, palavras-chave e fontes linguísticas indicadas.
+
 FORMATO PADRÃO:
 - Comece pelo resultado ou diagnóstico.
 - Em tarefas de implementação, entregue a solução completa.
 - Em tarefas de análise, liste problemas reais por prioridade e proponha correções.
 - Termine com instruções práticas de execução e teste.`};
-const prompts={ '/web':'Crie um jogo web completo em HTML, CSS e JavaScript, responsivo e jogável no celular.', '/html':'Crie uma página HTML responsiva completa, acessível e sem dependências desnecessárias.', '/canvas':'Crie uma experiência Canvas 2D com loop único, resize correto, controles touch e teclado.', '/game':'Desenvolva um jogo mobile completo em Canvas com estados, colisões, pontuação, pausa e persistência.', '/python':'Escreva um programa Python completo, executável e com tratamento de erros.', '/cpp':'Desenvolva uma solução C++ completa com classes, validação, compilação e exemplo de uso.', '/csharp':'Escreva um componente C# completo com tipos, validação e exemplo de integração.', '/react':'Crie um componente React completo, acessível, responsivo e sem estado inconsistente.', '/api':'Implemente uma API segura com validação, tratamento de erros, variáveis de ambiente e exemplos de chamada.', '/sql':'Modele o banco e escreva SQL completo com tabelas, chaves, índices e consultas de exemplo.', '/debug':'Analise o código enviado, reproduza mentalmente o erro, explique a causa e entregue a correção completa.', '/review':'Faça uma auditoria completa de arquitetura, segurança, performance, acessibilidade e bugs; depois corrija os problemas.', '/pwa':'Transforme o projeto em PWA instalável, com manifest, ícones, service worker e comportamento offline.', '/files':'Gere o projeto completo em blocos ===FILE: nome.ext=== e ===END FILE=== para baixar os arquivos e o ZIP.', '/wiki':'Explique o conceito técnico usando referência enciclopédica de programação: definição, origem, uso prático, limitações e exemplo de código quando couber.', '/mdn':'Responda como consulta MDN: regras corretas de HTML, CSS, JavaScript, Canvas, APIs web ou PWA, com sintaxe válida e compatibilidade.', '/w3schools':'Responda como guia de consulta rápida: sintaxe, exemplo simples, exemplo completo e erro comum para evitar.', '/stackoverflow':'Analise o erro como investigação prática: causa provável, como confirmar, correção direta e prevenção.', '/devdocs':'Monte uma ficha de documentação rápida com assinatura, parâmetros, retorno, exemplos e observações de uso.', '/libs':'Indique bibliotecas adequadas por linguagem/ecossistema, compare opções e recomende a melhor para o projeto.', '/botbase':'Crie uma biblioteca de respostas de bot com intents, exemplos de perguntas, respostas, fallback, tom, tags e formato JSON/YAML quando solicitado.', '/typescript':'Projete uma solução TypeScript robusta usando tipagem, validação com Zod, build com Vite/Next quando couber e testes com Vitest.', '/mobile':'Indique ou implemente a melhor abordagem mobile entre PWA, React Native/Expo, Flutter, Kotlin e Swift, justificando por custo e manutenção.', '/ai':'Projete recurso de IA com OpenAI SDK, LangChain, LlamaIndex, Hugging Face ou Ollama, separando API, contexto, memória, custo e segurança.', '/database':'Modele persistência com PostgreSQL, SQLite, Redis, Prisma, Drizzle, Elasticsearch ou Meilisearch conforme necessidade de consulta, cache e escala.', '/tests':'Crie estratégia de testes com Playwright, Cypress, Jest, Vitest e Testing Library, incluindo casos críticos e comando de execução.', '/security':'Faça auditoria de segurança com OWASP, validação, autenticação, hash de senha, JWT seguro, rate limit, headers e proteção de chaves.', '/devops':'Monte fluxo de deploy e CI/CD com Docker, GitHub Actions, Vercel, variáveis de ambiente, logs, rollback e monitoramento.', '/desktop':'Indique ou implemente app desktop com Electron, Tauri, PySide/Qt ou .NET MAUI, comparando tamanho, performance e manutenção.', '/go':'Escreva API ou ferramenta em Go usando Gin/Fiber, GORM, Cobra ou gRPC quando fizer sentido.', '/rust':'Escreva solução Rust com Tokio, Axum/Actix, Serde, Tauri ou Bevy, priorizando segurança e performance.', '/php':'Crie solução PHP/Laravel ou Symfony com Composer, validação, rotas, banco e testes com PHPUnit.', '/engines':'Compare engines de jogos como Godot, Unity, Unreal, Phaser, Love2D e Bevy, recomendando a melhor para o projeto.' };
+const prompts={ '/web':'Crie um jogo web completo em HTML, CSS e JavaScript, responsivo e jogável no celular.', '/html':'Crie uma página HTML responsiva completa, acessível e sem dependências desnecessárias.', '/canvas':'Crie uma experiência Canvas 2D com loop único, resize correto, controles touch e teclado.', '/game':'Desenvolva um jogo mobile completo em Canvas com estados, colisões, pontuação, pausa e persistência.', '/python':'Escreva um programa Python completo, executável e com tratamento de erros.', '/cpp':'Desenvolva uma solução C++ completa com classes, validação, compilação e exemplo de uso.', '/csharp':'Escreva um componente C# completo com tipos, validação e exemplo de integração.', '/react':'Crie um componente React completo, acessível, responsivo e sem estado inconsistente.', '/api':'Implemente uma API segura com validação, tratamento de erros, variáveis de ambiente e exemplos de chamada.', '/sql':'Modele o banco e escreva SQL completo com tabelas, chaves, índices e consultas de exemplo.', '/debug':'Analise o código enviado, reproduza mentalmente o erro, explique a causa e entregue a correção completa.', '/review':'Faça uma auditoria completa de arquitetura, segurança, performance, acessibilidade e bugs; depois corrija os problemas.', '/pwa':'Transforme o projeto em PWA instalável, com manifest, ícones, service worker e comportamento offline.', '/files':'Gere o projeto completo em blocos ===FILE: nome.ext=== e ===END FILE=== para baixar os arquivos e o ZIP.', '/wiki':'Explique o conceito técnico usando referência enciclopédica de programação: definição, origem, uso prático, limitações e exemplo de código quando couber.', '/mdn':'Responda como consulta MDN: regras corretas de HTML, CSS, JavaScript, Canvas, APIs web ou PWA, com sintaxe válida e compatibilidade.', '/w3schools':'Responda como guia de consulta rápida: sintaxe, exemplo simples, exemplo completo e erro comum para evitar.', '/stackoverflow':'Analise o erro como investigação prática: causa provável, como confirmar, correção direta e prevenção.', '/devdocs':'Monte uma ficha de documentação rápida com assinatura, parâmetros, retorno, exemplos e observações de uso.', '/libs':'Indique bibliotecas adequadas por linguagem/ecossistema, compare opções e recomende a melhor para o projeto.', '/botbase':'Crie uma biblioteca de respostas de bot com intents, exemplos de perguntas, respostas, fallback, tom, tags e formato JSON/YAML quando solicitado.', '/linguistica':'Analise o texto com biblioteca linguística: idioma provável, intenção, palavras-chave, normalização, sinônimos e fontes como spaCy, Stanza, Snowball, LanguageTool, Lingua-py, NLTK, CoGrOO e Linguateca.', '/typescript':'Projete uma solução TypeScript robusta usando tipagem, validação com Zod, build com Vite/Next quando couber e testes com Vitest.', '/mobile':'Indique ou implemente a melhor abordagem mobile entre PWA, React Native/Expo, Flutter, Kotlin e Swift, justificando por custo e manutenção.', '/ai':'Projete recurso de IA com OpenAI SDK, LangChain, LlamaIndex, Hugging Face ou Ollama, separando API, contexto, memória, custo e segurança.', '/database':'Modele persistência com PostgreSQL, SQLite, Redis, Prisma, Drizzle, Elasticsearch ou Meilisearch conforme necessidade de consulta, cache e escala.', '/tests':'Crie estratégia de testes com Playwright, Cypress, Jest, Vitest e Testing Library, incluindo casos críticos e comando de execução.', '/security':'Faça auditoria de segurança com OWASP, validação, autenticação, hash de senha, JWT seguro, rate limit, headers e proteção de chaves.', '/devops':'Monte fluxo de deploy e CI/CD com Docker, GitHub Actions, Vercel, variáveis de ambiente, logs, rollback e monitoramento.', '/desktop':'Indique ou implemente app desktop com Electron, Tauri, PySide/Qt ou .NET MAUI, comparando tamanho, performance e manutenção.', '/go':'Escreva API ou ferramenta em Go usando Gin/Fiber, GORM, Cobra ou gRPC quando fizer sentido.', '/rust':'Escreva solução Rust com Tokio, Axum/Actix, Serde, Tauri ou Bevy, priorizando segurança e performance.', '/php':'Crie solução PHP/Laravel ou Symfony com Composer, validação, rotas, banco e testes com PHPUnit.', '/engines':'Compare engines de jogos como Godot, Unity, Unreal, Phaser, Love2D e Bevy, recomendando a melhor para o projeto.' };
 let connected=false,busy=false,controller=null,activeMode='online',deferredInstallPrompt=null,remoteHistoryEnabled=false,idbPromise=null;
 let clientId=getClientId(), activeConversationId=localStorage.getItem(ACTIVE_CONVERSATION_KEY)||newConversationId(), conversationsCache=[], history=[system];
 localStorage.setItem(CLIENT_KEY,clientId);
@@ -194,7 +204,7 @@ function addDownloadPanel(answer){const files=parseGeneratedFiles(answer);if(!fi
 function stripInternalReasoning(text){return String(text||'').replace(/<think>[\s\S]*?(?:<\/think>|$)/gi,'').replace(/<analysis>[\s\S]*?(?:<\/analysis>|$)/gi,'').replace(/<reasoning>[\s\S]*?(?:<\/reasoning>|$)/gi,'').trim()}
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
-function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;knowledgeButton.disabled=busy;historyToggle.disabled=busy;exportHistory.disabled=busy;deleteHistory.disabled=busy;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar';renderConversationList()}
+function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;knowledgeButton.disabled=busy;linguisticButton.disabled=busy;historyToggle.disabled=busy;exportHistory.disabled=busy;deleteHistory.disabled=busy;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar';renderConversationList()}
 function updateConnection(ok,message){connected=ok;setStatus(message);controls();if(ok)input.focus()}
 function formatKnowledgeResults(data){
  const lines=['[BASE] Busca: '+data.query];
@@ -207,6 +217,44 @@ function formatKnowledgeResults(data){
  });
  if(Array.isArray(data.warnings)&&data.warnings.length)lines.push('Avisos: '+data.warnings.join(' | '));
  return lines.join('\n');
+}
+function formatLinguisticResults(data){
+ const lines=['[LINGUÍSTICA] Idioma provável: '+data.detectedLanguage.label+' ('+data.detectedLanguage.code+') · confiança '+data.detectedLanguage.confidence];
+ const intents=Array.isArray(data.intents)?data.intents:[];
+ lines.push('Intenções: '+(intents.length?intents.map(item=>item.label).join(', '):'não identificada'));
+ const keywords=Array.isArray(data.keywords)?data.keywords:[];
+ lines.push('Palavras-chave: '+(keywords.length?keywords.map(item=>item.word).join(', '):'nenhuma'));
+ const resources=Array.isArray(data.resources)?data.resources:[];
+ if(resources.length){lines.push('Fontes indicadas:');resources.slice(0,8).forEach(item=>lines.push('- '+item.title+' · '+item.url))}
+ return lines.join('\n');
+}
+async function getLinguisticContext(text){
+ try{
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),1500);
+  const response=await fetch('/api/linguistics/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:controller.signal});
+  clearTimeout(timer);
+  const data=await response.json();
+  if(!response.ok||!data.ok||!data.promptHint)return '';
+  return '\n\n===== ANÁLISE LINGUÍSTICA LOCAL =====\n'+data.promptHint;
+ }catch{return ''}
+}
+async function analyzeLinguistics(){
+ const query=input.value.trim();
+ if(!query){add('[LINGUÍSTICA] Digite primeiro o texto que quer analisar.','error');input.focus();return}
+ busy=true;controls();setStatus('Analisando idioma e intenção...');
+ try{
+  const response=await fetch('/api/linguistics/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:query})});
+  const data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Falha na análise linguística');
+  add(formatLinguisticResults(data));
+  setStatus('Análise linguística concluída.');
+ }catch(error){
+  add('[LINGUÍSTICA] Erro: '+(error.message||error),'error');
+  setStatus('Análise linguística indisponível.');
+ }finally{
+  busy=false;controls();input.focus();
+ }
 }
 async function searchKnowledge(){
  const query=input.value.trim();
@@ -238,6 +286,7 @@ function decodeSSE(buffer,onPayload){
 }
 connect.addEventListener('click',checkServer);
 knowledgeButton.addEventListener('click',searchKnowledge);
+linguisticButton.addEventListener('click',analyzeLinguistics);
 clear.addEventListener('click',startNewConversation);
 historyToggle.addEventListener('click',()=>{historyPanel.hidden=!historyPanel.hidden;if(!historyPanel.hidden)refreshConversationCache()});
 exportHistory.addEventListener('click',exportAllHistory);
@@ -249,7 +298,8 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
  let savedUser={role:'user',content:text};input.value='';add('> '+text+(fileInput.files.length?' · '+[...fileInput.files].map(file=>file.name).join(', '):''));const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta online...');controller=new AbortController();let answer='';
  try{
   const built=await prepareAttachments([...fileInput.files]);
-  const requestUser={role:'user',content:text+built.text};
+  const linguisticContext=await getLinguisticContext(text);
+  const requestUser={role:'user',content:text+built.text+linguisticContext};
   savedUser={role:'user',content:text+(built.names.length?'\n[Anexos: '+built.names.join(', ')+']':'')};
   const context=[...history,requestUser].slice(-21);
   const url=ONLINE_API;
