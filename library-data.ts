@@ -1,6 +1,6 @@
 export interface LibraryItem {
   name: string;
-  category: 'cenario' | 'atores' | 'comportamento' | 'eventos' | 'controle' | 'funcoes' | 'propriedades' | 'cores' | 'referencias' | 'ecossistemas' | 'linguistica' | 'bots';
+  category: 'cenario' | 'atores' | 'comportamento' | 'eventos' | 'controle' | 'funcoes' | 'propriedades' | 'cores' | 'referencias' | 'ecossistemas' | 'jogos' | 'linguistica' | 'bots';
   syntax: string;
   desc: string;
   example: string;
@@ -424,6 +424,36 @@ export const BIT_LIBRARY: LibraryItem[] = [
     syntax: 'Godot, Unity, Unreal, Phaser, Love2D, Bevy',
     desc: 'Opções de engines e frameworks para jogos 2D, 3D, web, mobile e desktop.',
     example: 'Use Godot para 2D/3D leve, Unity para C#, Unreal para 3D avançado, Phaser para web 2D e Bevy para Rust.'
+  },
+
+  // Biblioteca de jogos, assets e sprites
+  {
+    name: 'Plataformas abertas de prototipagem',
+    category: 'jogos',
+    syntax: 'Microsoft MakeCode Arcade, microStudio, TIC-80',
+    desc: 'Ambientes gratuitos para criar protótipos jogáveis, testar movimentação, mapas, colisões e arte inicial com baixa fricção.',
+    example: 'Use MakeCode Arcade para protótipo rápido em Python/JS, microStudio para código + pixel art integrados e TIC-80 para jogos retrô com sprites e mapas embutidos.'
+  },
+  {
+    name: 'Assets gratuitos para jogos',
+    category: 'jogos',
+    syntax: 'Kenney Assets, OpenGameArt, Itch.io Free Game Assets',
+    desc: 'Fontes de arte 2D, UI, áudio, tilesets, sprites e efeitos para acelerar protótipos e builds jogáveis.',
+    example: 'Use Kenney quando precisar de CC0 limpo; OpenGameArt para variedade comunitária; Itch.io Free Game Assets para pacotes independentes e tilesets.'
+  },
+  {
+    name: 'Editores gratuitos de sprites',
+    category: 'jogos',
+    syntax: 'Piskel, Pixelorama',
+    desc: 'Ferramentas para desenhar, animar e exportar personagens em pixel art, spritesheets e quadros de movimento.',
+    example: 'Use Piskel para animação quadro a quadro no navegador; Pixelorama para fluxo open-source com camadas e animações mais completas.'
+  },
+  {
+    name: 'Primeiro protótipo de movimentação',
+    category: 'jogos',
+    syntax: 'input, física simples, animação, colisão, câmera, exportação',
+    desc: 'Estrutura mínima recomendada antes de investir em assets: personagem se move, animação troca quadros, colisão funciona e controles mobile/teclado respondem.',
+    example: 'Comece com src/input, src/player, src/world, src/assets e uma spritesheet simples; depois substitua os placeholders por assets Kenney, Piskel ou Pixelorama.'
   },
 
   // Linguística computacional
