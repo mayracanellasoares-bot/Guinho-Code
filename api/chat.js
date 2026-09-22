@@ -261,11 +261,16 @@ export default async function handler(req, res) {
 
   try {
     const reader = upstream.body.getReader();
+    let upstreamBytes = 0;
     while (true) {
       const result = await readWithTimeout(reader, upstreamController);
       if (result.done) break;
-      if (result.value && !res.destroyed) res.write(Buffer.from(result.value));
+      if (result.value && result.value.byteLength) {
+        upstreamBytes += result.value.byteLength;
+        if (!res.destroyed) res.write(Buffer.from(result.value));
+      }
     }
+    if (!upstreamBytes) throw new Error('UPSTREAM_EMPTY_STREAM');
     if (!res.writableEnded) res.end();
   } catch (error) {
     markFailure(selected);
