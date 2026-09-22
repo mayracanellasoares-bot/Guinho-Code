@@ -21,7 +21,7 @@ body{display:flex;flex-direction:column}
 button,select{border:1px solid #000;background:#fff;color:#000;padding:7px 9px;font:inherit}
 button{cursor:pointer}
 button:disabled{opacity:.45;cursor:wait}
-.cat{color:#000;text-align:center;font-size:12px;line-height:1.15;margin:8px 0}
+.cat{color:#000;text-align:left;font-size:12px;line-height:1.15;margin:8px 0}
 .shortcut{border:0;background:#fff;color:#000;padding:3px 0;display:block;text-align:left}
 .shortcut:hover{text-decoration:underline}
 .attach-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #000;margin-top:10px;padding-top:9px}
@@ -33,6 +33,7 @@ button:disabled{opacity:.45;cursor:wait}
 #input-area{display:flex;gap:8px;align-items:center;min-height:52px;border-top:1px solid #000;padding:5px 9px;padding-bottom:max(5px,env(safe-area-inset-bottom));background:#fff}
 #user-input{flex:1;min-width:0;background:#fff;color:#000;border:0;outline:0;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}
 #send{color:#000;border-color:#000;background:#fff}
+.downloads{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}.download-button{border:1px solid #000;background:#fff;color:#000;padding:5px 8px;font:inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -56,6 +57,7 @@ button:disabled{opacity:.45;cursor:wait}
 </section>
 </main>
 <form id="input-area"><span>&gt;</span><input id="user-input" type="text" disabled autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Conecte para começar..."/><button id="send" type="submit" disabled>Enviar</button></form>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -80,9 +82,11 @@ REGRAS PARA PROGRAMAÇÃO:
 4. Para HTML, CSS e JavaScript, valide DOM, escopo, eventos, responsividade, touch, acessibilidade, tratamento de erros e fluxo assíncrono.
 5. Para jogos, preserve um único loop de animação, estados consistentes, colisões, resize e controles mobile.
 6. Para integrações de IA, nunca exponha chaves no cliente; use backend, variáveis de ambiente e streaming correto.
-7. Quando o código for longo, organize a resposta em partes continuáveis e informe exatamente onde a continuação começa.
-8. Quando detectar um erro, explique a causa concreta, corrija-a e entregue a versão corrigida.
-9. Responda em português do Brasil, com objetividade e precisão. Não elogie sem evidência e não prometa algo que não foi testado.
+8. Quando o usuário pedir arquivos, gere cada arquivo com o formato exato `===FILE: caminho/nome.ext===`, seguido do conteúdo completo, e finalize com `===END FILE===`. Não coloque explicações dentro desses blocos.
+9. Gere os blocos apenas para arquivos realmente solicitados e use caminhos seguros, sem `..`.
+10. Quando o código for longo, organize a resposta em partes continuáveis e informe exatamente onde a continuação começa.
+11. Quando detectar um erro, explique a causa concreta, corrija-a e entregue a versão corrigida.
+12. Responda em português do Brasil, com objetividade e precisão. Não elogie sem evidência e não prometa algo que não foi testado.
 
 FORMATO PADRÃO:
 - Comece pelo resultado ou diagnóstico.
@@ -97,6 +101,10 @@ fileInput.addEventListener('change',renderFiles);
 let pdfModulePromise=null;
 async function extractPdfText(file){pdfModulePromise??=import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.mjs');const pdfjs=await pdfModulePromise;const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),disableWorker:true}).promise;const pages=[];for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){const page=await pdf.getPage(pageNo);const content=await page.getTextContent();pages.push(content.items.map(item=>item.str||'').join(' '));if(pages.join('\n').length>100000)break}return pages.join('\n')}
 async function prepareAttachments(files){const blocks=[],names=[];let total=0;for(const file of files){if(file.size>MAX_FILE_BYTES)throw new Error(file.name+' excede o limite de 2 MB');if(total+file.size>MAX_TOTAL_BYTES)throw new Error('O total dos anexos não pode exceder 3 MB');total+=file.size;const lower=file.name.toLowerCase();let extracted;if(lower.endsWith('.pdf'))extracted=await extractPdfText(file);else if(/\.(txt|md|csv|json|html|css|js|ts|py|java|c|cpp|h|cs|xml|yaml|yml|sql|log)$/i.test(lower)||file.type.startsWith('text/'))extracted=await file.text();else throw new Error(file.name+': formato não suportado; use PDF, TXT ou arquivo de código');blocks.push('\n\n===== DOCUMENTO: '+file.name+' =====\n'+extracted.slice(0,100000));names.push(file.name)}return {text:blocks.join(''),names}}
+function parseGeneratedFiles(text){const files=[];const pattern=/===FILE:\s*([^=\n]+?)===\\n([\\s\\S]*?)\\n===END FILE===/g;let match;while((match=pattern.exec(text))){const name=match[1].trim().replace(/^[/\\]+/,'').replace(/\.\\./g,'_');if(name&&match[2].trim())files.push({name,content:match[2]})}return files}
+function downloadText(name,content){const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}
+async function downloadZip(files){if(!window.JSZip){add('[DOWNLOAD] Biblioteca ZIP ainda carregando. Tente novamente.','error');return}const zip=new JSZip();files.forEach(file=>zip.file(file.name,file.content));const blob=await zip.generateAsync({type:'blob'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='guinho-projeto.zip';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}
+function addDownloadPanel(answer){const files=parseGeneratedFiles(answer);if(!files.length)return;const panel=document.createElement('div');panel.className='downloads';const zip=document.createElement('button');zip.className='download-button';zip.type='button';zip.textContent='Baixar ZIP';zip.addEventListener('click',()=>downloadZip(files));panel.append(zip);files.forEach(file=>{const button=document.createElement('button');button.className='download-button';button.type='button';button.textContent='Baixar '+file.name;button.addEventListener('click',()=>downloadText(file.name,file.content));panel.append(button)});term.append(panel);term.scrollTop=term.scrollHeight}
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
 function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
@@ -129,7 +137,7 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
   if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
   const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
   while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const token=event.choices?.[0]?.delta?.content||'';answer+=token;out.textContent='GUINHO > '+answer;term.scrollTop=term.scrollHeight}catch{}})}
-  if(answer){history.push(savedUser,{role:'assistant',content:answer});localStorage.setItem('guinho_history',JSON.stringify(history.slice(1)));fileInput.value='';renderFiles();setStatus('ONLINE ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
+  if(answer){history.push(savedUser,{role:'assistant',content:answer});localStorage.setItem('guinho_history',JSON.stringify(history.slice(1)));addDownloadPanel(answer);fileInput.value='';renderFiles();setStatus('ONLINE ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
  }catch(ex){if(ex.name==='AbortError'){out.textContent='[Interrompida]';}else{out.textContent='[Servidor ocupado — tente novamente em instantes]';setStatus('Reconexão automática ativada.');}out.classList.add('error');}
  finally{busy=false;controller=null;controls();input.focus()}
 });
