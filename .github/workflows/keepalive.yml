@@ -1,0 +1,22 @@
+name: Guinho Keepalive
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Warm Guinho endpoints
+        run: |
+          set +e
+          BASE="https://guinho-code.vercel.app"
+          curl -fsS --max-time 20 "$BASE/" >/dev/null
+          curl -fsS --max-time 20 "$BASE/api/health" >/dev/null
+          curl -fsS --max-time 20 "$BASE/api/knowledge/search?q=ping&source=catalog" >/dev/null
+          curl -fsS --max-time 20 "$BASE/api/linguistics/analyze?q=ping" >/dev/null
+          curl -sS --max-time 20 -o /dev/null "$BASE/api/chat"
+          exit 0
