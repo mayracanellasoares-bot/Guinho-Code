@@ -1,6 +1,6 @@
 export interface LibraryItem {
   name: string;
-  category: 'cenario' | 'atores' | 'comportamento' | 'eventos' | 'controle' | 'funcoes' | 'propriedades' | 'cores';
+  category: 'cenario' | 'atores' | 'comportamento' | 'eventos' | 'controle' | 'funcoes' | 'propriedades' | 'cores' | 'referencias' | 'ecossistemas' | 'bots';
   syntax: string;
   desc: string;
   example: string;
@@ -259,5 +259,109 @@ export const BIT_LIBRARY: LibraryItem[] = [
     syntax: 'preto, branco, vermelho, verde, azul, amarelo, ciano, magenta, cinza, laranja, roxo, rosa, marrom, invisivel',
     desc: 'Paleta padrão integrada de cores 8-bit pré-definidas.',
     example: 'fundo azul\ndesenho quadrado 10, amarelo'
+  },
+
+  // Referências técnicas para programação
+  {
+    name: 'Wikipédia Técnica de Programação',
+    category: 'referencias',
+    syntax: 'conceitos, algoritmos, história, arquitetura de software',
+    desc: 'Base enciclopédica útil para definições, contexto histórico, algoritmos, linguagens e fundamentos de computação.',
+    example: 'https://pt.wikipedia.org/wiki/Linguagem_de_programa%C3%A7%C3%A3o\nhttps://en.wikipedia.org/wiki/Portal:Programming\nhttps://pt.wikipedia.org/wiki/WikiWikiWeb'
+  },
+  {
+    name: 'MDN Web Docs',
+    category: 'referencias',
+    syntax: 'HTML, CSS, JavaScript, Canvas, APIs Web, PWA',
+    desc: 'Referência prioritária para desenvolvimento web: sintaxe, compatibilidade, APIs do navegador e comportamento correto de HTML, CSS e JavaScript.',
+    example: 'https://developer.mozilla.org/'
+  },
+  {
+    name: 'W3Schools',
+    category: 'referencias',
+    syntax: 'consulta rápida, tutoriais, exemplos básicos',
+    desc: 'Fonte prática para exemplos rápidos de Python, Java, C#, SQL, HTML, CSS, JavaScript e outras tecnologias.',
+    example: 'https://www.w3schools.com/'
+  },
+  {
+    name: 'Stack Overflow',
+    category: 'referencias',
+    syntax: 'erros, exceções, bugs, soluções práticas',
+    desc: 'Base prática de perguntas e respostas para investigar mensagens de erro, bugs recorrentes e soluções já discutidas por programadores.',
+    example: 'https://stackoverflow.com/'
+  },
+  {
+    name: 'DevDocs.io',
+    category: 'referencias',
+    syntax: 'documentação agregada e pesquisável',
+    desc: 'Manual rápido que reúne documentação de centenas de linguagens, bibliotecas e frameworks em uma interface única, com suporte offline.',
+    example: 'https://devdocs.io/'
+  },
+
+  // Ecossistemas e bibliotecas externas
+  {
+    name: 'Python - Bibliotecas principais',
+    category: 'ecossistemas',
+    syntax: 'NumPy, Pandas, Scikit-learn, TensorFlow, PyTorch, Django, Flask, Selenium, BeautifulSoup',
+    desc: 'Ecossistema forte para IA, ciência de dados, automação, web scraping e back-end.',
+    example: 'Use NumPy/Pandas para dados, Scikit-learn para ML clássico, PyTorch/TensorFlow para redes neurais, Django/Flask para web e Selenium/BeautifulSoup para automação.'
+  },
+  {
+    name: 'C#/.NET - Bibliotecas principais',
+    category: 'ecossistemas',
+    syntax: 'ASP.NET Core, Entity Framework Core, Unity, Newtonsoft.Json, System.Text.Json',
+    desc: 'Ecossistema forte para aplicações corporativas, APIs, jogos com Unity e sistemas de alta performance.',
+    example: 'Use ASP.NET Core para APIs, EF Core para banco de dados, Unity para jogos e System.Text.Json ou Newtonsoft.Json para JSON.'
+  },
+  {
+    name: 'Web Front-End - Bibliotecas principais',
+    category: 'ecossistemas',
+    syntax: 'React, Vue, Angular, Tailwind CSS, Bootstrap, GSAP',
+    desc: 'Bibliotecas e frameworks para interfaces web, componentes, layout responsivo e animações.',
+    example: 'Use React para UI escalável, Vue para simplicidade, Angular para aplicações corporativas, Tailwind/Bootstrap para estilos e GSAP para animações.'
+  },
+  {
+    name: 'Canvas e Jogos Web',
+    category: 'ecossistemas',
+    syntax: 'Three.js, Phaser, PixiJS, Fabric.js',
+    desc: 'Ferramentas para gráficos, jogos 2D/3D, renderização de alta performance e editores visuais no navegador.',
+    example: 'Use Phaser para jogos 2D, Three.js para 3D, PixiJS para renderização 2D rápida e Fabric.js para editores de formas/imagens.'
+  },
+  {
+    name: 'Node.js - Bibliotecas principais',
+    category: 'ecossistemas',
+    syntax: 'Express, Socket.IO, Prisma, Sequelize, Passport',
+    desc: 'Ecossistema para back-end JavaScript/TypeScript, APIs, tempo real, autenticação e banco de dados.',
+    example: 'Use Express para APIs, Socket.IO para tempo real, Prisma/Sequelize para banco e Passport para autenticação.'
+  },
+  {
+    name: 'Java - Bibliotecas principais',
+    category: 'ecossistemas',
+    syntax: 'Spring Boot, Hibernate, JUnit, Mockito, Lombok',
+    desc: 'Ecossistema corporativo robusto para APIs, microsserviços, persistência, testes e redução de código repetitivo.',
+    example: 'Use Spring Boot para aplicações web, Hibernate para ORM, JUnit/Mockito para testes e Lombok para reduzir boilerplate.'
+  },
+
+  // Bases de resposta para bots
+  {
+    name: 'Datasets para chatbots',
+    category: 'bots',
+    syntax: 'Kaggle, CoQA, bases JSON/CSV/TXT',
+    desc: 'Conjuntos de dados úteis para exemplos de perguntas, respostas, classificação de intenção e manutenção de contexto em conversas.',
+    example: 'Estruture os dados por intent, exemplos de perguntas, resposta principal, variações, tags e fallback.'
+  },
+  {
+    name: 'Frameworks de bots',
+    category: 'bots',
+    syntax: 'Rasa, Botpress, ChatterBot',
+    desc: 'Ferramentas para gerenciar intents, fluxos, respostas, contexto e treinamento de bots.',
+    example: 'Use Rasa/Botpress para fluxos estruturados; ChatterBot pode servir para experimentos, mas exige curadoria de corpus.'
+  },
+  {
+    name: 'Templates de atendimento e prompts',
+    category: 'bots',
+    syntax: 'respostas rápidas, fallback, persona, tom, scripts',
+    desc: 'Biblioteca de respostas prontas para saudação, dúvidas frequentes, erro, transferência, conclusão e coleta de dados.',
+    example: 'Exemplo de intent: saudacao\nPerguntas: oi, bom dia, tudo bem?\nResposta: Olá. Como posso ajudar no seu projeto hoje?\nFallback: Não tenho dados suficientes. Envie o erro, código ou objetivo.'
   }
 ];
