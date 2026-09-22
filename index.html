@@ -62,7 +62,7 @@ const prompts={ '/web':'Crie o jogo Poda em um único arquivo HTML com Canvas, p
 let connected=false,busy=false,controller=null,activeMode='online';\nlet savedHistory=[];try{savedHistory=JSON.parse(localStorage.getItem('guinho_history')||'[]');if(!Array.isArray(savedHistory))savedHistory=[]}catch{savedHistory=[]}let history=[system,...savedHistory];
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
-function controls(){input.disabled=!connected||busy;send.disabled=input.disabled;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
+function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
 function updateConnection(ok,message){connected=ok;setStatus(message);controls();if(ok)input.focus()}
 async function checkServer(){connect.disabled=true;setStatus('Conectando ao Guinho Servidor...');try{const r=await fetch('/api/health',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();updateConnection(true,'ONLINE ATIVO: '+data.model+' · chave protegida no servidor');add('[OK] Conectado ao Guinho Servidor.')}catch(ex){updateConnection(false,'Servidor online indisponível. Verifique a Vercel.');add('[ERRO] '+(ex.message||ex),'error')}finally{connect.disabled=false;controls()}}\nfunction decodeSSE(buffer,onPayload){
  // llama-server pode usar CRLF (\r\n) no SSE; normalize antes de separar eventos.
@@ -77,9 +77,9 @@ async function checkServer(){connect.disabled=true;setStatus('Conectando ao Guin
 connect.addEventListener('click',checkServer);
 clear.addEventListener('click',()=>{if(busy)return;history=[system];localStorage.removeItem('guinho_history');add('[SESSÃO] Histórico limpo.');input.focus()});
 continueCode.addEventListener('click',()=>{if(!connected||busy||history.length<3)return;input.value='Continue exatamente a partir do ponto onde o código anterior parou. Não repita trechos já enviados; entregue somente a continuação.';document.querySelector('#input-area').requestSubmit()});
-document.querySelectorAll('[data-cmd]').forEach(button=>button.addEventListener('click',()=>{if(!input.disabled){input.value=prompts[button.dataset.cmd];input.focus()}}));
+document.querySelectorAll('[data-cmd]').forEach(button=>button.addEventListener('click',()=>{if(!busy){input.value=prompts[button.dataset.cmd];input.focus()}}));
 document.querySelector('#input-area').addEventListener('submit',async event=>{
- event.preventDefault();const text=input.value.trim();if(!connected||busy||!text)return;
+ event.preventDefault();const text=input.value.trim();if(busy||!text)return;if(!connected){await checkServer();if(!connected)return;}
  const user={role:'user',content:text};input.value='';add('> '+text);const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta online...');controller=new AbortController();let answer='';
  try{
   const context=[...history,user].slice(-21);
@@ -90,9 +90,10 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
   while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const token=event.choices?.[0]?.delta?.content||'';answer+=token;out.textContent='GUINHO > '+answer;term.scrollTop=term.scrollHeight}catch{}})}
   if(answer){history.push(user,{role:'assistant',content:answer});localStorage.setItem('guinho_history',JSON.stringify(history.slice(1)));setStatus('ONLINE ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
  }catch(ex){out.textContent='[ERRO NA GERAÇÃO] '+(ex.name==='AbortError'?'Interrompida.':ex.message||ex);out.classList.add('error');setStatus('Falha de conexão com o servidor online.');connected=false}
- finally{busy=false;controller=null;controls();if(connected)input.focus()}
+ finally{busy=false;controller=null;controls();input.focus()}
 });
 controls();
+checkServer();
 })();
 </script>
 </body>
