@@ -1,5 +1,3 @@
-import { neon } from '@neondatabase/serverless';
-
 const MAX_MESSAGES = 80;
 const MAX_CONTENT_LENGTH = 240000;
 const MAX_TITLE_LENGTH = 90;
@@ -7,13 +5,16 @@ const CLIENT_ID_PATTERN = /^[a-zA-Z0-9_-]{12,96}$/;
 const CONVERSATION_ID_PATTERN = /^[a-zA-Z0-9_-]{8,96}$/;
 
 let schemaReady = false;
+let neonFactoryPromise = null;
 
 function setNoStore(res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
 }
 
-function getSql() {
+async function getSql() {
   if (!process.env.DATABASE_URL) return null;
+  neonFactoryPromise ||= import('@neondatabase/serverless').then(module => module.neon);
+  const neon = await neonFactoryPromise;
   return neon(process.env.DATABASE_URL);
 }
 
@@ -102,7 +103,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const sql = getSql();
+  const sql = await getSql();
   if (!sql) {
     res.status(200).json({
       ok: true,
