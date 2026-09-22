@@ -1,4 +1,4 @@
-const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.1-8b-instruct';
+const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.3-70b-instruct';
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
 
 export default async function handler(req, res) {
