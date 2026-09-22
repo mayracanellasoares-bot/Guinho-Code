@@ -6,7 +6,33 @@
 <meta name="theme-color" content="#000000">
 <title>GUINHO-CODE · Guinho Servidor</title>
 <style>
-*{box-sizing:border-box}html,body{height:100%;margin:0;background:#000;color:#00f65b;font:14px/1.48 ui-monospace,SFMono-Regular,Consolas,monospace}body{display:flex;flex-direction:column}#terminal{flex:1;min-height:0;overflow:auto;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}.box{border:1px solid #8b5a2b;background:#050805;padding:12px}.title{color:#c89247;font-weight:700}.logo{color:#00f65b;white-space:pre;overflow-x:auto;font-size:clamp(7px,1.7vw,11px);line-height:1.08;margin:8px 0}.status{color:#d5a45f;margin:9px 0}.line{margin:10px 0;white-space:pre-wrap}.answer{color:#7cff8b}.error{color:#ff7777}.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}button,select{border:1px solid #9c702f;background:#070707;color:#ffc25b;padding:7px 9px;font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:wait}.cat{color:#ffc25b;text-align:center;font-size:clamp(18px,4vw,30px);line-height:1.05;margin:8px 0 2px;text-shadow:0 0 8px #00f65b}.shortcut{border:0;background:none;color:#59e8f2;padding:3px 0;display:block;text-align:left}.shortcut:hover{text-decoration:underline}#input-area{display:flex;gap:8px;align-items:center;min-height:52px;border-top:1px solid #00b843;padding:5px 9px;padding-bottom:max(5px,env(safe-area-inset-bottom))}#user-input{flex:1;min-width:0;background:transparent;color:#00f65b;border:0;outline:0;font:16px ui-monospace,SFMono-Regular,Consolas,monospace}#send{color:#00f65b;border-color:#008c39}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#fff;color:#000;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+body{display:flex;flex-direction:column}
+#terminal{flex:1;min-height:0;overflow:auto;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.box{border:1px solid #000;background:#fff;padding:12px}
+.title{color:#000;font-weight:700}
+.logo{color:#000;white-space:pre;overflow-x:auto;font-size:clamp(8px,1.8vw,12px);line-height:1.08;margin:8px 0}
+.status{color:#000;margin:9px 0}
+.line{margin:10px 0;white-space:pre-wrap}
+.answer{color:#000}
+.error{color:#000;border-left:3px solid #000;padding-left:8px}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+button,select{border:1px solid #000;background:#fff;color:#000;padding:7px 9px;font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.45;cursor:wait}
+.cat{color:#000;text-align:center;font-size:12px;line-height:1.15;margin:8px 0}
+.shortcut{border:0;background:#fff;color:#000;padding:3px 0;display:block;text-align:left}
+.shortcut:hover{text-decoration:underline}
+.attach-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #000;margin-top:10px;padding-top:9px}
+.file-label{border:1px solid #000;background:#fff;color:#000;padding:7px 9px;cursor:pointer}
+#attachments{display:none}
+#attachment-status{color:#000}
+.file-list{margin:5px 0 0;padding:0;list-style:none}
+.file-item{display:inline-block;border:1px solid #000;padding:2px 5px;margin:2px 4px 2px 0;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+#input-area{display:flex;gap:8px;align-items:center;min-height:52px;border-top:1px solid #000;padding:5px 9px;padding-bottom:max(5px,env(safe-area-inset-bottom));background:#fff}
+#user-input{flex:1;min-width:0;background:#fff;color:#000;border:0;outline:0;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}
+#send{color:#000;border-color:#000;background:#fff}
 </style>
 </head>
 <body>
@@ -18,7 +44,10 @@
 | (_ | | || | | | | ' \  | ' \  / _ \ |___| | (__  / _ \ / _` | / -_)
  \___|  \_,_| |_| |_||_| |_||_| \___/        \___| \___/ \__,_| \___|</pre>
 <div id="status" class="status">Servidor online · toque em Conectar.</div>
-<div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button></div>
+<div class="toolbar"><span class="title">ONLINE · GUINHO SERVIDOR</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button></div><pre class="cat" aria-label="Gatinho ASCII"> /\_/\\
+( o.o )
+ > ^ <</pre>
+<div class="attach-row"><label class="file-label" for="attachments">Anexar documento</label><input id="attachments" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.cs,.xml,.yaml,.yml,.sql,.log,image/*"><span id="attachment-status">nenhum arquivo selecionado</span></div><ul id="file-list" class="file-list" aria-live="polite"></ul>
 <div class="title">PROMPTS DE ATALHO:</div>
 <button class="shortcut" data-cmd="/web">/web - HTML/CSS/JS Poda Game</button>
 <button class="shortcut" data-cmd="/canvas">/canvas - Canvas Matrix</button>
@@ -33,6 +62,8 @@
 const ONLINE_API='/api/chat';
 const term=document.querySelector('#terminal'), status=document.querySelector('#status'), input=document.querySelector('#user-input');
 const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send');
+const fileInput=document.querySelector('#attachments'), fileList=document.querySelector('#file-list'), attachmentStatus=document.querySelector('#attachment-status');
+const MAX_FILE_BYTES=2*1024*1024, MAX_TOTAL_BYTES=3*1024*1024;
 const system={role:'system',content:`Você é o Guinho-Code, um engenheiro de software sênior, analista de requisitos e arquiteto de soluções. Sua prioridade é compreender corretamente o objetivo do usuário antes de responder e entregar um resultado funcional, verificável e diretamente utilizável.
 
 REGRAS DE INTERPRETAÇÃO:
@@ -61,6 +92,10 @@ FORMATO PADRÃO:
 const prompts={ '/web':'Crie o jogo Poda em um único arquivo HTML com Canvas, pixels verdes e controles para toque.', '/canvas':'Crie um script Canvas JavaScript para renderizar sprites retrô com malha de pixels.', '/cpp':'Desenvolva uma classe gerenciadora de estados para um jogo em C++.', '/csharp':'Escreva um componente em C# para movimentação baseada em vetores.' };
 let connected=false,busy=false,controller=null,activeMode='online';
 let savedHistory=[];try{savedHistory=JSON.parse(localStorage.getItem('guinho_history')||'[]');if(!Array.isArray(savedHistory))savedHistory=[]}catch{savedHistory=[]}let history=[system,...savedHistory];
+function renderFiles(){const files=[...fileInput.files];fileList.innerHTML='';attachmentStatus.textContent=files.length?files.length+' arquivo(s) selecionado(s)':'nenhum arquivo selecionado';files.forEach(file=>{const li=document.createElement('li');li.className='file-item';li.textContent=file.name+' ('+Math.ceil(file.size/1024)+' KB)';fileList.append(li)})}
+fileInput.addEventListener('change',renderFiles);
+function readAsDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error('Não foi possível ler '+file.name));reader.readAsDataURL(file)})}
+async function prepareAttachments(files){const parts=[],names=[];let total=0;for(const file of files){if(file.size>MAX_FILE_BYTES)throw new Error(file.name+' excede o limite de 2 MB');if(total+file.size>MAX_TOTAL_BYTES)throw new Error('O total dos anexos não pode exceder 3 MB');total+=file.size;parts.push({type:'file',file:{filename:file.name,file_data:await readAsDataURL(file)}});names.push(file.name)}return {parts,names}}
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
 function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
@@ -82,15 +117,18 @@ continueCode.addEventListener('click',()=>{if(!connected||busy||history.length<3
 document.querySelectorAll('[data-cmd]').forEach(button=>button.addEventListener('click',()=>{if(!busy){input.value=prompts[button.dataset.cmd];input.focus()}}));
 document.querySelector('#input-area').addEventListener('submit',async event=>{
  event.preventDefault();const text=input.value.trim();if(busy||!text)return;if(!connected){await checkServer();if(!connected)return;}
- const user={role:'user',content:text};input.value='';add('> '+text);const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta online...');controller=new AbortController();let answer='';
+ let savedUser={role:'user',content:text};input.value='';add('> '+text+(fileInput.files.length?' · '+[...fileInput.files].map(file=>file.name).join(', '):''));const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta online...');controller=new AbortController();let answer='';
  try{
-  const context=[...history,user].slice(-21);
+  const built=await prepareAttachments([...fileInput.files]);
+  const requestUser={role:'user',content:built.parts.length?[{type:'text',text},...built.parts]:text};
+  savedUser={role:'user',content:text+(built.names.length?'\n[Anexos: '+built.names.join(', ')+']':'')};
+  const context=[...history,requestUser].slice(-21);
   const url=ONLINE_API;
   let response=null;for(let attempt=0;attempt<3;attempt++){try{response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});if(response.ok&&response.body)break;}catch(error){if(attempt===2)throw error;}if(attempt<2){setStatus('Aguardando o servidor... tentativa '+(attempt+2)+'/3');await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));}}
   if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
   const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
   while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const token=event.choices?.[0]?.delta?.content||'';answer+=token;out.textContent='GUINHO > '+answer;term.scrollTop=term.scrollHeight}catch{}})}
-  if(answer){history.push(user,{role:'assistant',content:answer});localStorage.setItem('guinho_history',JSON.stringify(history.slice(1)));setStatus('ONLINE ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
+  if(answer){history.push(savedUser,{role:'assistant',content:answer});localStorage.setItem('guinho_history',JSON.stringify(history.slice(1)));fileInput.value='';renderFiles();setStatus('ONLINE ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
  }catch(ex){if(ex.name==='AbortError'){out.textContent='[Interrompida]';}else{out.textContent='[Servidor ocupado — tente novamente em instantes]';setStatus('Reconexão automática ativada.');}out.classList.add('error');}
  finally{busy=false;controller=null;controls();input.focus()}
 });
