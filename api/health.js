@@ -1,10 +1,11 @@
-const MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
+const nvidia = Boolean(process.env.NVIDIA_API_KEY || process.env.NVIDIA_KEY);
+const openRouter = Boolean(process.env.OPENROUTER_API_KEY);
 
 export default function handler(req, res) {
-  const ok = Boolean(process.env.OPENROUTER_API_KEY);
-  res.status(ok ? 200 : 500).json({
-    ok,
-    model: MODEL,
-    provider: 'openrouter'
-  });
+  const provider = nvidia ? 'nvidia' : openRouter ? 'openrouter' : 'none';
+  const model = nvidia
+    ? (process.env.NVIDIA_MODEL || 'meta/llama-3.1-8b-instruct')
+    : (process.env.OPENROUTER_MODEL || 'openrouter/free');
+  const ok = provider !== 'none';
+  res.status(ok ? 200 : 500).json({ ok, provider, model });
 }
