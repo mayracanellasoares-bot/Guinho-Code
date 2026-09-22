@@ -1,6 +1,8 @@
 const MAX_OUTPUT_TOKENS = 32000;
-const CONNECT_TIMEOUT_MS = 18000;
+const CONNECT_TIMEOUT_MS = 10000;
 const STREAM_IDLE_TIMEOUT_MS = 90000;
+const FIRST_CONTENT_TIMEOUT_MS = 12000;
+const MAX_FRAMES_WITHOUT_CONTENT = 80;
 const providerCooldownUntil = new Map();
 
 function unique(values) {
@@ -193,12 +195,45 @@ function sanitizeSseFrame(frame) {
   }).join('\n');
 }
 
-function flushSseFrames(buffer, writeFrame) {
+function inspectSsePayload(payload) {
+  if (payload === '[DONE]') return { hasData: true, done: true, hasContent: false, hasError: false };
+  try {
+    const data = JSON.parse(payload);
+    const choices = Array.isArray(data.choices) ? data.choices : [];
+    const hasContent = choices.some(choice => {
+      const delta = choice?.delta || {};
+      const message = choice?.message || {};
+      return Boolean(
+        (typeof delta.content === 'string' && delta.content.length) ||
+        (typeof message.content === 'string' && message.content.length)
+      );
+    });
+    return { hasData: true, done: false, hasContent, hasError: Boolean(data.error) };
+  } catch {
+    return { hasData: true, done: false, hasContent: false, hasError: false };
+  }
+}
+
+function inspectSseFrame(frame) {
+  return frame.split('\n').reduce((stats, row) => {
+    if (!row.startsWith('data: ')) return stats;
+    const item = inspectSsePayload(row.slice(6));
+    return {
+      hasData: stats.hasData || item.hasData,
+      done: stats.done || item.done,
+      hasContent: stats.hasContent || item.hasContent,
+      hasError: stats.hasError || item.hasError
+    };
+  }, { hasData: false, done: false, hasContent: false, hasError: false });
+}
+
+function flushSseFrames(buffer, writeFrame, inspectFrame = () => {}) {
   buffer = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   let index;
   while ((index = buffer.indexOf('\n\n')) !== -1) {
     const frame = buffer.slice(0, index);
     buffer = buffer.slice(index + 2);
+    inspectFrame(inspectSseFrame(frame));
     writeFrame(sanitizeSseFrame(frame) + '\n\n');
   }
   return buffer;
@@ -303,6 +338,18 @@ export default async function handler(req, res) {
     const decoder = new TextDecoder();
     let upstreamBytes = 0;
     let remainder = '';
+    let sawContent = false;
+    let framesWithoutContent = 0;
+    const streamStartedAt = Date.now();
+    const inspectFrame = stats => {
+      if (!stats.hasData || stats.done || stats.hasError) return;
+      if (stats.hasContent) {
+        sawContent = true;
+        framesWithoutContent = 0;
+        return;
+      }
+      if (!sawContent) framesWithoutContent += 1;
+    };
     while (true) {
       const result = await readWithTimeout(reader, upstreamController);
       if (result.done) break;
@@ -310,12 +357,15 @@ export default async function handler(req, res) {
         upstreamBytes += result.value.byteLength;
         remainder = flushSseFrames(remainder + decoder.decode(result.value, { stream: true }), frame => {
           if (!res.destroyed) res.write(frame);
-        });
+        }, inspectFrame);
+        if (!sawContent && (Date.now() - streamStartedAt > FIRST_CONTENT_TIMEOUT_MS || framesWithoutContent > MAX_FRAMES_WITHOUT_CONTENT)) {
+          throw new Error('UPSTREAM_FIRST_CONTENT_TIMEOUT');
+        }
       }
     }
     remainder = flushSseFrames(remainder + decoder.decode(), frame => {
       if (!res.destroyed) res.write(frame);
-    });
+    }, inspectFrame);
     if (remainder.trim() && !res.destroyed) {
       res.write(sanitizeSseFrame(remainder) + '\n\n');
     }
