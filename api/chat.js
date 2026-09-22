@@ -165,6 +165,45 @@ function publicFailures(failures) {
   }));
 }
 
+function stripReasoningFields(value) {
+  if (Array.isArray(value)) return value.map(stripReasoningFields);
+  if (!value || typeof value !== 'object') return value;
+  const blocked = new Set(['reasoning', 'reasoning_content', 'reasoning_details', 'thoughts', 'chain_of_thought']);
+  const cleaned = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (blocked.has(key)) continue;
+    cleaned[key] = stripReasoningFields(item);
+  }
+  return cleaned;
+}
+
+function sanitizeSsePayload(payload) {
+  if (payload === '[DONE]') return payload;
+  try {
+    return JSON.stringify(stripReasoningFields(JSON.parse(payload)));
+  } catch {
+    return payload;
+  }
+}
+
+function sanitizeSseFrame(frame) {
+  return frame.split('\n').map(row => {
+    if (!row.startsWith('data: ')) return row;
+    return 'data: ' + sanitizeSsePayload(row.slice(6));
+  }).join('\n');
+}
+
+function flushSseFrames(buffer, writeFrame) {
+  buffer = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  let index;
+  while ((index = buffer.indexOf('\n\n')) !== -1) {
+    const frame = buffer.slice(0, index);
+    buffer = buffer.slice(index + 2);
+    writeFrame(sanitizeSseFrame(frame) + '\n\n');
+  }
+  return buffer;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -261,14 +300,24 @@ export default async function handler(req, res) {
 
   try {
     const reader = upstream.body.getReader();
+    const decoder = new TextDecoder();
     let upstreamBytes = 0;
+    let remainder = '';
     while (true) {
       const result = await readWithTimeout(reader, upstreamController);
       if (result.done) break;
       if (result.value && result.value.byteLength) {
         upstreamBytes += result.value.byteLength;
-        if (!res.destroyed) res.write(Buffer.from(result.value));
+        remainder = flushSseFrames(remainder + decoder.decode(result.value, { stream: true }), frame => {
+          if (!res.destroyed) res.write(frame);
+        });
       }
+    }
+    remainder = flushSseFrames(remainder + decoder.decode(), frame => {
+      if (!res.destroyed) res.write(frame);
+    });
+    if (remainder.trim() && !res.destroyed) {
+      res.write(sanitizeSseFrame(remainder) + '\n\n');
     }
     if (!upstreamBytes) throw new Error('UPSTREAM_EMPTY_STREAM');
     if (!res.writableEnded) res.end();
