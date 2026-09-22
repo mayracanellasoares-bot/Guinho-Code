@@ -96,11 +96,12 @@ REGRAS PARA PROGRAMAÇÃO:
 4. Para HTML, CSS e JavaScript, valide DOM, escopo, eventos, responsividade, touch, acessibilidade, tratamento de erros e fluxo assíncrono.
 5. Para jogos, preserve um único loop de animação, estados consistentes, colisões, resize e controles mobile.
 6. Para integrações de IA, nunca exponha chaves no cliente; use backend, variáveis de ambiente e streaming correto.
-7. Quando o usuário pedir arquivos, gere cada arquivo com o formato exato "===FILE: caminho/nome.ext===", seguido do conteúdo completo, e finalize com "===END FILE===". Não coloque explicações dentro desses blocos.
-8. Gere os blocos apenas para arquivos realmente solicitados e use caminhos seguros, sem dois pontos consecutivos.
-9. Quando o código for longo, organize a resposta em partes continuáveis e informe exatamente onde a continuação começa.
-10. Quando detectar um erro, explique a causa concreta, corrija-a e entregue a versão corrigida.
-11. Responda em português do Brasil, com objetividade e precisão. Não elogie sem evidência e não prometa algo que não foi testado.
+7. Nunca revele raciocínio interno, cadeia de pensamento, tokens de raciocínio ou análise privada. Entregue apenas uma justificativa breve e a resposta final.
+8. Quando o usuário pedir arquivos, gere cada arquivo com o formato exato "===FILE: caminho/nome.ext===", seguido do conteúdo completo, e finalize com "===END FILE===". Não coloque explicações dentro desses blocos.
+9. Gere os blocos apenas para arquivos realmente solicitados e use caminhos seguros, sem dois pontos consecutivos.
+10. Quando o código for longo, organize a resposta em partes continuáveis e informe exatamente onde a continuação começa.
+11. Quando detectar um erro, explique a causa concreta, corrija-a e entregue a versão corrigida.
+12. Responda em português do Brasil, com objetividade e precisão. Não elogie sem evidência e não prometa algo que não foi testado.
 
 FORMATO PADRÃO:
 - Comece pelo resultado ou diagnóstico.
@@ -119,6 +120,7 @@ function parseGeneratedFiles(text){text=String(text||'').replace(/\r\n?/g,'\n');
 function downloadText(name,content){const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}
 async function downloadZip(files){if(!window.JSZip){add('[DOWNLOAD] Biblioteca ZIP ainda carregando. Tente novamente.','error');return}const zip=new JSZip();files.forEach(file=>zip.file(file.name,file.content));const blob=await zip.generateAsync({type:'blob'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='guinho-projeto.zip';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}
 function addDownloadPanel(answer){const files=parseGeneratedFiles(answer);if(!files.length)return;const panel=document.createElement('div');panel.className='downloads';const zip=document.createElement('button');zip.className='download-button';zip.type='button';zip.textContent='Baixar ZIP';zip.addEventListener('click',()=>downloadZip(files));panel.append(zip);files.forEach(file=>{const button=document.createElement('button');button.className='download-button';button.type='button';button.textContent='Baixar '+file.name;button.addEventListener('click',()=>downloadText(file.name,file.content));panel.append(button)});term.append(panel);term.scrollTop=term.scrollHeight}
+function stripInternalReasoning(text){return String(text||'').replace(/<think>[\s\S]*?(?:<\/think>|$)/gi,'').replace(/<analysis>[\s\S]*?(?:<\/analysis>|$)/gi,'').replace(/<reasoning>[\s\S]*?(?:<\/reasoning>|$)/gi,'').trim()}
 function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
 function setStatus(text){status.textContent=text}
 function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar'}
@@ -147,14 +149,37 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
   savedUser={role:'user',content:text+(built.names.length?'\n[Anexos: '+built.names.join(', ')+']':'')};
   const context=[...history,requestUser].slice(-21);
   const url=ONLINE_API;
-  let response=null;for(let attempt=0;attempt<3;attempt++){try{response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});if(response.ok&&response.body)break;}catch(error){if(attempt===2)throw error;}if(attempt<2){setStatus('Aguardando o servidor... tentativa '+(attempt+2)+'/3');await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));}}
-  if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
-  const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
-  while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const token=event.choices?.[0]?.delta?.content||'';answer+=token;out.textContent='GUINHO > '+answer;term.scrollTop=term.scrollHeight}catch{}})}
+  let lastError=null;
+  for(let attempt=0;attempt<3;attempt++){
+   answer='';
+   out.textContent='GUINHO > '+(attempt?'[reconectando...]':'[processando...]');
+   try{
+    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});
+    if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
+    const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='';
+    const onPayload=payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);const delta=event.choices?.[0]?.delta||{};const token=delta.content||'';if(token){answer+=token;out.textContent='GUINHO > '+stripInternalReasoning(answer)}else if(delta.reasoning){out.textContent='GUINHO > [processando...]'}term.scrollTop=term.scrollHeight}catch{}};
+    while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),onPayload)}
+    remainder=decodeSSE(remainder+decoder.decode(),onPayload);
+    answer=stripInternalReasoning(answer);
+    if(!answer.trim())throw new Error('EMPTY_RESPONSE');
+    lastError=null;break;
+   }catch(error){
+    lastError=error;
+    if(error.name==='AbortError')throw error;
+    if(attempt===2)throw error;
+    setStatus('Resposta interrompida; reconectando... tentativa '+(attempt+2)+'/3');
+    await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
+   }
+  }
+  if(lastError)throw lastError;
   if(answer){history.push(savedUser,{role:'assistant',content:answer});localStorage.setItem('guinho_history',JSON.stringify(history.slice(1)));addDownloadPanel(answer);fileInput.value='';renderFiles();setStatus('ONLINE ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
  }catch(ex){if(ex.name==='AbortError'){out.textContent='[Interrompida]';}else{out.textContent='[Servidor ocupado — tente novamente em instantes]';setStatus('Reconexão automática ativada.');}out.classList.add('error');}
  finally{busy=false;controller=null;controls();input.focus()}
 });
+installButton.addEventListener('click',async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;return}add('[PWA] Use o menu do navegador e escolha "Instalar aplicativo".')});
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event});
+window.addEventListener('appinstalled',()=>add('[PWA] Guinho-Code instalado neste dispositivo.'));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}));
 controls();
 checkServer();
 setInterval(()=>{if(!busy)checkServer(true)},30000);
