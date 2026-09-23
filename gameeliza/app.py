@@ -1,4 +1,4 @@
-"""GameEliza MultiDev: deterministic local code library and project memory."""
+"""Dev_Eliza MultiDev: deterministic programming assistant and local library."""
 import http.server
 import json
 import os
@@ -68,18 +68,23 @@ def init_storage():
             db.execute("ALTER TABLE snippet_history ADD COLUMN topic TEXT NOT NULL DEFAULT ''")
 
 
-class ElizaEngine:
+class DevElizaEngine:
     def __init__(self):
         entries = [
-            (95, "collision_character", r"\bcolis[aã]o\s+d[oa]\s+(meu|minha)\s+(personagem)\b", ["O que impede a colisão de {0} de funcionar no Godot?", "Quando {0} tenta colidir no Godot, quais são as máscaras dos dois objetos?"]),
+            (110, "libraries", r"\b(pandas|numpy|scikit[- ]learn|tensorflow|pytorch)\b", ["Para trabalhar com {0}, qual operação você está tentando realizar?", "O problema em {0} envolve dados, dimensões ou desempenho?", "Qual entrada mínima reproduz o comportamento de {0}?"]),
+            (105, "games", r"\b(pygame|unity|godot|unreal|jogo|games?)\b", ["No desenvolvimento de jogos com {0}, como está estruturado o game loop?", "Para criar essa mecânica em {0}, quais entradas e estados precisam ser controlados?", "Você está trabalhando com {0} em 2D ou 3D e qual é o resultado esperado?"]),
+            (100, "servers", r"\b(flask|fastapi|django|node(?:\.js)?|express|servidor|api|endpoint)\b", ["Ao configurar {0}, qual rota e método HTTP estão envolvidos?", "Em {0}, o payload é validado antes de chegar à regra de negócio?", "Qual código de status e qual resposta você recebe em {0}?"]),
+            (108, "collision_character", r"\bcolis[aã]o\s+d[oa]\s+(meu|minha)\s+(personagem)\b", ["O que impede a colisão de {0} de funcionar no Godot?", "Quando {0} tenta colidir no Godot, quais são as máscaras dos dois objetos?"]),
             (90, "loops", r"\b(loop|laço|while|for|fps|delta|frame)\b", ["Em {0}, qual condição encerra a repetição?", "Se registrar cada passo de {0}, em qual iteração o estado diverge?"]),
             (85, "physics", r"\b(física|gravidade|vetor|velocidade|aceleração)\b", ["Em {0}, qual unidade de tempo é usada no cálculo?", "Qual valor de {0} aparece no quadro em que o resultado muda?"]),
             (80, "collision", r"\b(colisão|colidir|hitbox|raycast|trigger)\b", ["Em {0}, as áreas de contato se sobrepõem de fato?", "Em {0}, as máscaras e camadas estão configuradas nos dois objetos?"]),
             (75, "memory", r"\b(vazamento|memória|memory leak|gc|alocação)\b", ["A memória de {0} aumenta ao repetir a mesma ação?", "Há objetos ou listeners criados por {0} sem descarte?"]),
-            (70, "api", r"\b(api|endpoint|http|fetch|requisição)\b", ["Qual resposta HTTP retorna {0} e qual payload foi enviado?", "Você consegue reproduzir {0} com uma requisição mínima?"]),
+            (70, "api", r"\b(http|fetch|requisição)\b", ["Qual resposta HTTP retorna {0} e qual payload foi enviado?", "Você consegue reproduzir {0} com uma requisição mínima?"]),
             (65, "database", r"\b(sql|banco|database|sqlite|query|tabela)\b", ["Qual consulta de {0} gera resultado inesperado?", "O esquema e os parâmetros de {0} conferem com os valores inseridos?"]),
             (60, "shaders", r"\b(shader|fragment|vertex|renderização|uniform)\b", ["Qual uniforme de {0} difere do esperado?", "Se definir cor fixa para {0}, o objeto aparece?"]),
             (55, "ui", r"\b(ui|interface|botão|input|tecla|toque|css)\b", ["Em {0}, qual evento chega ao elemento?", "Há uma camada ou foco bloqueando {0}?"]),
+            (50, "how_to_code", r"\b(como fazer|como programar|me mostre o c[oó]digo de)\s+(.+)", ["Para criar {1}, precisamos definir entrada, processamento e saída. Qual linguagem prefere?", "A lógica para {1} pode ser dividida em pequenas funções. Quer começar pelo algoritmo básico?"]),
+            (45, "error", r"\b(erro|bug|crash|não funciona|exception|traceback)\b", ["Qual é a mensagem exata do erro e qual entrada a reproduz?", "O problema pode estar em indentação, tipagem ou escopo. Qual trecho falha?", "Consegue isolar a função problemática em um teste mínimo?"]),
         ]
         self.rules = [(name, re.compile(pattern, re.I), responses) for _, name, pattern, responses in sorted(entries, reverse=True)]
 
@@ -100,13 +105,19 @@ class ElizaEngine:
                     place = "Godot" if re.search(r"\bGodot\b", message, re.I) else "jogo"
                     template = responses[variant].replace("Godot", place)
                     return template.format(self.reflect(match.group(1) + " " + match.group(2))), name
-                return responses[variant].format(self.reflect(match.group(1))), name
+                groups = tuple(self.reflect(group) for group in match.groups())
+                return responses[variant].format(*groups), name
         if re.search(r"\b(erro|bug|falha|crash|exception)\b", message, re.I):
             return "Qual é a primeira linha do erro e qual entrada o reproduz?", "debug"
-        return "Que resultado você esperava, o que ocorreu e qual é o menor trecho que reproduz o caso?", "general"
+        fallbacks = [
+            "Compreendo. Para qual linguagem, biblioteca ou framework você quer direcionar essa lógica?",
+            "Você está focando na arquitetura de servidores, lógica de jogos ou análise de dados?",
+            "Descreva os requisitos do sistema e o menor trecho que reproduz o comportamento.",
+        ]
+        return fallbacks[sum(ord(char) for char in message.casefold()) % len(fallbacks)], "general"
 
 
-ENGINE = ElizaEngine()
+ENGINE = DevElizaEngine()
 
 
 def project(db, project_id):
@@ -289,6 +300,7 @@ HTML = r'''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta n
 :root{color-scheme:dark;--bg:#10121b;--panel:#191e2b;--edge:#333d52;--text:#e0e6f1;--accent:#7ad9ce}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer;background:#244f53;border:1px solid #40988e;color:#eff; padding:9px 13px;border-radius:7px}button:hover{background:#306267}button:disabled{opacity:.5}input,select,textarea{background:#111727;color:var(--text);border:1px solid var(--edge);border-radius:7px;padding:10px;min-width:0}textarea{resize:vertical}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.layout{display:grid;grid-template-columns:255px minmax(0,1fr) minmax(280px,38%);height:100dvh}.sidebar,.right{background:var(--panel);overflow:auto;padding:16px}.sidebar{border-right:1px solid var(--edge)}.right{border-left:1px solid var(--edge)}h1{font-size:19px;color:var(--accent);margin:0}h2{font-size:15px;margin:18px 0 9px}.muted,small{color:#b3c0d2}.stack{display:grid;gap:8px}.stack>*{width:100%}.files{list-style:none;padding:0;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,monospace}.files li{padding:5px;border-bottom:1px solid var(--edge)}.center{display:flex;flex-direction:column;min-height:0}.top{padding:14px 18px;border-bottom:1px solid var(--edge)}#log{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}.bubble{max-width:90%;padding:11px 13px;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:9px}.bot{align-self:flex-start;background:#202c38;border-left:3px solid var(--accent)}.user{align-self:flex-end;background:#323554;border-left:3px solid #ffcd75}#chatForm{display:flex;gap:8px;padding:12px;border-top:1px solid var(--edge)}#message{flex:1}pre{max-height:55dvh;overflow:auto;padding:15px;background:#0b111e;border:1px solid var(--edge);border-radius:7px;font:13px/1.5 ui-monospace,monospace;white-space:pre}#snippetName{overflow-wrap:anywhere}details{margin-top:12px}summary{cursor:pointer}#status{min-height:1.4em}@media(max-width:960px){.layout{grid-template-columns:210px 1fr}.right{grid-column:1/-1;border-left:0;border-top:1px solid var(--edge)}.center{height:65dvh}}@media(max-width:600px){.layout{display:flex;flex-direction:column;height:auto;min-height:100dvh}.sidebar{border-right:0;border-bottom:1px solid var(--edge)}.center{height:65dvh;min-height:460px}.right{min-height:240px}#chatForm{padding:8px}}
 </style></head><body><div class="layout"><aside class="sidebar"><h1>GameEliza</h1><small>MultiDev · biblioteca local</small><h2>Projeto</h2><div class="stack"><label for="project">Projeto ativo</label><select id="project"></select><input id="newName" placeholder="Nome do novo projeto" aria-label="Nome do novo projeto" maxlength="100"><input id="newProfile" placeholder="Perfil: jogo 2D, API..." aria-label="Perfil do projeto" maxlength="500"><button id="create">Criar projeto</button><label for="language">Linguagem/engine</label><select id="language"><option value="all">Todas</option><option value="godot">Godot</option><option value="python">Python</option><option value="javascript">JavaScript</option><option value="csharp">C#</option><option value="cpp">C++</option><option value="sql">SQL</option></select></div><h2>Biblioteca</h2><small>Arquivos lidos de ./biblioteca/</small><ul id="files" class="files"></ul></aside><main class="center"><div class="top"><strong>Depuração reflexiva</strong><div class="muted">Respostas por regras. Código exibido vem dos arquivos locais.</div></div><section id="log" role="log" aria-live="polite"><div class="bubble bot">Qual problema você quer investigar? Especifique a linguagem e descreva o comportamento esperado.</div></section><form id="chatForm"><input id="message" aria-label="Pergunta" placeholder="Ex.: movimento com gravidade em Godot" maxlength="4000" required><button id="send">Enviar</button></form></main><aside class="right"><h2>Snippet encontrado</h2><div id="snippetName" class="muted">Faça uma busca no chat.</div><pre><code id="code"></code></pre><button id="copy" disabled>Copiar código</button><button id="approve" disabled>Aprovar snippet</button><details><summary>Memória aprendida</summary><ul id="learned" class="files"><li>Selecione um projeto para começar.</li></ul></details><details><summary>Notas e preferências</summary><div class="stack"><textarea id="preferences" aria-label="Preferências de arquitetura" placeholder="Preferências de arquitetura"></textarea><button id="savePrefs">Salvar preferências</button><textarea id="bugNote" aria-label="Nota de bug resolvido" placeholder="Descreva um bug resolvido"></textarea><button id="saveNote">Salvar nota</button><ul id="notes"></ul></div></details><p id="status" class="muted" role="status"></p></aside></div>
 <script>
+document.title='Dev_Eliza · MultiDev Engine';const brandHeading=document.querySelector('.sidebar h1');if(brandHeading)brandHeading.textContent='Dev_Eliza';
 const uploadLabel=document.createElement('label');uploadLabel.htmlFor='upload';uploadLabel.textContent='Anexar códigos';const uploadInput=document.createElement('input');uploadInput.id='upload';uploadInput.type='file';uploadInput.multiple=true;uploadInput.accept='.gd,.cs,.py,.cpp,.js,.sql,.json,text/plain';const uploadHint=document.createElement('small');uploadHint.textContent='Vários arquivos · máximo 512 KB por arquivo. “Todas” identifica pela extensão.';const filesList=document.getElementById('files');filesList.before(uploadLabel,uploadInput,uploadHint);
 const $=id=>document.getElementById(id);let projects=[],active=null,current=null;
 uploadInput.accept='*/*';const languageSelect=document.getElementById('language');[['html','HTML'],['css','CSS'],['text','Texto']].forEach(([value,label])=>languageSelect.add(new Option(label,value)));
@@ -476,7 +488,7 @@ def main():
         print("Porta 8000 indisponível:", error)
         return
     with server:
-        print("GameEliza MultiDev em http://127.0.0.1:8000 (Ctrl+C encerra)", flush=True)
+        print("Dev_Eliza MultiDev em http://127.0.0.1:8000 (Ctrl+C encerra)", flush=True)
         if "--open" in os.sys.argv:
             webbrowser.open("http://127.0.0.1:8000")
         try:
