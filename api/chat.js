@@ -145,7 +145,7 @@ async function openProvider(provider, payload) {
   }
 }
 
-function readWithTimeout(reader, controller) {
+function readWithTimeout(reader, controller, timeoutMs = STREAM_IDLE_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(() => {
@@ -153,7 +153,7 @@ function readWithTimeout(reader, controller) {
       settled = true;
       controller.abort();
       reject(new Error('UPSTREAM_IDLE_TIMEOUT'));
-    }, STREAM_IDLE_TIMEOUT_MS);
+    }, timeoutMs);
     reader.read().then(value => {
       if (settled) return;
       settled = true;
@@ -360,7 +360,10 @@ export default async function handler(req, res) {
       if (!sawContent) framesWithoutContent += 1;
     };
     while (true) {
-      const result = await readWithTimeout(reader, upstreamController);
+      const firstContentRemaining = FIRST_CONTENT_TIMEOUT_MS - (Date.now() - streamStartedAt);
+      if (!sawContent && firstContentRemaining <= 0) throw new Error('UPSTREAM_FIRST_CONTENT_TIMEOUT');
+      const result = await readWithTimeout(reader, upstreamController,
+        sawContent ? STREAM_IDLE_TIMEOUT_MS : Math.min(STREAM_IDLE_TIMEOUT_MS, firstContentRemaining));
       if (result.done) break;
       if (result.value && result.value.byteLength) {
         upstreamBytes += result.value.byteLength;
@@ -395,8 +398,8 @@ export default async function handler(req, res) {
             retryable: true
           },
           provider: selected.id
-        }) + '\\n\\n');
-        res.write('data: [DONE]\\n\\n');
+        }) + '\n\n');
+        res.write('data: [DONE]\n\n');
       } catch {}
       res.end();
     }
