@@ -8,7 +8,7 @@
 <link rel="icon" href="/guinho-logo.svg" type="image/svg+xml">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Guinho-Code">
-<title>GUINHO-CODE · Qwen Local</title>
+<title>GUINHO-CODE · Roteador Local</title>
 <style>
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:#fff;color:#000;font:14px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
@@ -53,13 +53,13 @@ button:disabled{opacity:.45;cursor:wait}
 <body>
 <main id="terminal" role="log" aria-live="polite">
 <section class="box">
-<div class="brand"><div class="brand-copy"><div class="title">GUINHO-CODE v4.0 · QWEN LOCAL</div>
+<div class="brand"><div class="brand-copy"><div class="title">GUINHO-CODE v4.0 · IA LOCAL AUTO</div>
 <pre class="logo">  ___          _          _                   ___            _
  / __|  _  _  (_)  _ _   | |_    ___   ___   / __|  ___   __| |  ___
 | (_ | | || | | | | ' \  | ' \  / _ \ |___| | (__  / _ \ / _` | / -_)
  \___|  \_,_| |_| |_||_| |_||_| \___/        \___| \___/ \__,_| \___|</pre></div><img class="cat-logo" src="/guinho-logo.svg" alt="Gatinho preto do Guinho-Code"></div>
-<div id="status" class="status">Qwen local · inicie o llama-server e toque em Conectar.</div><div class="line">LOCAL QWEN: mantenha o llama-server aberto no Termux. O histórico é salvo neste navegador.</div>
-<div class="toolbar"><span class="title">LOCAL · QWEN</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button><button id="history-toggle" type="button">Histórico</button><button id="export-history" type="button">Exportar</button><button id="delete-history" type="button">Apagar histórico</button><button id="knowledge-search" type="button">Buscar base</button><button id="linguistic-analyze" type="button">Linguística</button><button id="install-pwa" type="button">Instalar PWA</button></div>
+<div id="status" class="status">IA local automática · inicie o Guinho Router e toque em Conectar.</div><div class="line">LOCAL AUTO: o roteador escolhe Qwen, Nemotron ou Gemma conforme o pedido. O histórico é salvo neste navegador.</div>
+<div class="toolbar"><span class="title">LOCAL · AUTO</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button><button id="history-toggle" type="button">Histórico</button><button id="export-history" type="button">Exportar</button><button id="delete-history" type="button">Apagar histórico</button><button id="knowledge-search" type="button">Buscar base</button><button id="linguistic-analyze" type="button">Linguística</button><button id="install-pwa" type="button">Instalar PWA</button></div>
 <div class="tabbar" role="tablist" aria-label="Áreas do Guinho"><button class="tab-button" type="button" data-panel="attachments-panel" aria-selected="true">Anexos</button><button class="tab-button" type="button" data-panel="prompts-panel" aria-selected="false">Prompts</button><button class="tab-button" type="button" data-panel="history-panel" aria-selected="false">Histórico</button></div>
 <div id="attachments-panel" class="tab-panel">
 <div class="attach-row"><label class="file-label" for="attachments">Anexar documento</label><input id="attachments" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.cs,.xml,.yaml,.yml,.sql,.log"><span id="attachment-status">nenhum arquivo selecionado</span></div><ul id="file-list" class="file-list" aria-live="polite"></ul>
@@ -112,8 +112,8 @@ button:disabled{opacity:.45;cursor:wait}
 <script>
 (() => {
 'use strict';
-const ONLINE_API='http://127.0.0.1:8080/v1/chat/completions';
-const LOCAL_QWEN_MODE=true;
+const ONLINE_API='http://127.0.0.1:8090/v1/chat/completions';
+const LOCAL_AUTO_MODE=true;
 const term=document.querySelector('#terminal'), status=document.querySelector('#status'), input=document.querySelector('#user-input');
 const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send'), knowledgeButton=document.querySelector('#knowledge-search'), linguisticButton=document.querySelector('#linguistic-analyze'), installButton=document.querySelector('#install-pwa');
 const historyToggle=document.querySelector('#history-toggle'), exportHistory=document.querySelector('#export-history'), deleteHistory=document.querySelector('#delete-history'), historyPanel=document.querySelector('#history-panel'), historyStatus=document.querySelector('#history-status'), conversationList=document.querySelector('#conversation-list');
@@ -310,18 +310,18 @@ async function searchKnowledge(){
 }
 async function checkServer(silent=false){
  connect.disabled=true;
- if(!silent)setStatus('Verificando Qwen local...');
+ if(!silent)setStatus('Verificando roteador local...');
  const healthController=new AbortController();
  const timer=setTimeout(()=>healthController.abort(),6000);
  try{
   const r=await fetch('http://127.0.0.1:8080/health',{cache:'no-store',signal:healthController.signal});
   if(!r.ok)throw new Error('HTTP '+r.status);
   const data=await r.json().catch(()=>({}));
-  updateConnection(true,'QWEN LOCAL ATIVO · '+(data.status||'servidor pronto'));
-  if(!silent)add('[OK] Qwen local conectado.');
+  updateConnection(true,'IA LOCAL AUTO ATIVA · '+(data.activeModel?data.activeModel.toUpperCase()+' · ':'')+(data.status||'roteador pronto'));
+  if(!silent)add('[OK] Roteador local conectado.');
  }catch(ex){
-  updateConnection(false,'QWEN LOCAL OFFLINE · abra o llama-server no Termux');
-  if(!silent)add('[AVISO] Qwen local indisponível: '+(ex.message||ex),'error');
+  updateConnection(false,'IA LOCAL AUTO OFFLINE · execute python ~/guinho-router.py no Termux');
+  if(!silent)add('[AVISO] Roteador local indisponível: '+(ex.message||ex),'error');
  }finally{
   clearTimeout(timer);
   connect.disabled=false;
@@ -350,7 +350,7 @@ continueCode.addEventListener('click',()=>{if(!connected||busy||history.length<3
 document.querySelectorAll('[data-cmd]').forEach(button=>button.addEventListener('click',()=>{if(!busy){input.value=prompts[button.dataset.cmd];input.focus()}}));
 document.querySelector('#input-area').addEventListener('submit',async event=>{
  event.preventDefault();const text=input.value.trim();if(busy||!text)return;if(!connected){await checkServer();if(!connected)return;}
- let savedUser={role:'user',content:text};input.value='';add('> '+text+(fileInput.files.length?' · '+[...fileInput.files].map(file=>file.name).join(', '):''));const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta com Qwen local...');controller=new AbortController();let answer='';let requestTimer=null;
+ let savedUser={role:'user',content:text};input.value='';add('> '+text+(fileInput.files.length?' · '+[...fileInput.files].map(file=>file.name).join(', '):''));const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta com IA local automática...');controller=new AbortController();let answer='';let requestTimer=null;
  try{
   const built=await prepareAttachments([...fileInput.files]);
   const linguisticContext=await getLinguisticContext(text);
@@ -365,10 +365,10 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
   for(let attempt=0;attempt<3;attempt++){
    answer='';
    out.textContent='GUINHO > '+(attempt?'[reconectando...]':'[processando...]');
-   let activeProvider='';
+   let activeProvider='';let activeModel='';
    try{
-    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'qwen',messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:requestedTokens}),signal:controller.signal});
-    activeProvider=response.headers.get('x-guinho-provider')||'';
+    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'auto',messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:requestedTokens}),signal:controller.signal});
+    activeProvider=response.headers.get('x-guinho-provider')||'';activeModel=response.headers.get('x-guinho-model')||'';
     if(!response.ok||!response.body){
       let detail='';
       try{detail=await response.text()}catch{}
@@ -399,8 +399,8 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
    }
   }
   if(lastError)throw lastError;
-  if(answer){const now=new Date().toISOString();history.push({...savedUser,createdAt:now},{role:'assistant',content:answer,createdAt:new Date().toISOString()});await persistCurrentConversation(true);addDownloadPanel(answer);fileInput.value='';renderFiles();setStatus('QWEN LOCAL ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
- }catch(ex){const fallback=buildLocalFallbackAnswer(text,ex);out.textContent='GUINHO > '+fallback;out.classList.remove('error');const now=new Date().toISOString();history.push({...savedUser,createdAt:now},{role:'assistant',content:fallback,createdAt:new Date().toISOString()});await persistCurrentConversation(false);setStatus('Qwen local indisponível; biblioteca local ativada.');}
+  if(answer){const now=new Date().toISOString();history.push({...savedUser,createdAt:now},{role:'assistant',content:answer,createdAt:new Date().toISOString()});await persistCurrentConversation(true);addDownloadPanel(answer);fileInput.value='';renderFiles();setStatus('IA LOCAL AUTO ATIVA · '+(activeModel||'modelo automático').toUpperCase()+' · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
+ }catch(ex){const fallback=buildLocalFallbackAnswer(text,ex);out.textContent='GUINHO > '+fallback;out.classList.remove('error');const now=new Date().toISOString();history.push({...savedUser,createdAt:now},{role:'assistant',content:fallback,createdAt:new Date().toISOString()});await persistCurrentConversation(false);setStatus('IA local automática indisponível; biblioteca local ativada.');}
   finally{if(requestTimer)clearTimeout(requestTimer);busy=false;controller=null;controls();input.focus()}
 });
 installButton.addEventListener('click',async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;return}add('[PWA] Use o menu do navegador e escolha "Instalar aplicativo".')});
