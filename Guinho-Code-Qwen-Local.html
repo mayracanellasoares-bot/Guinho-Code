@@ -314,7 +314,7 @@ async function checkServer(silent=false){
  const healthController=new AbortController();
  const timer=setTimeout(()=>healthController.abort(),6000);
  try{
-  const r=await fetch('http://127.0.0.1:8080/health',{cache:'no-store',signal:healthController.signal});
+  const r=await fetch('http://127.0.0.1:8090/health',{cache:'no-store',signal:healthController.signal});
   if(!r.ok)throw new Error('HTTP '+r.status);
   const data=await r.json().catch(()=>({}));
   updateConnection(true,'IA LOCAL AUTO ATIVA · '+(data.activeModel?data.activeModel.toUpperCase()+' · ':'')+(data.status||'roteador pronto'));
