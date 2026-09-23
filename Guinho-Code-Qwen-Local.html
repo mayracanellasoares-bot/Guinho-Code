@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/guinho-logo.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Guinho-Code">
+<title>GUINHO-CODE · Qwen Local</title>
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#fff;color:#000;font:14px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+body{display:flex;flex-direction:column}
+#terminal{flex:1;min-height:0;overflow:auto;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.box{border:1px solid #000;background:#fff;padding:12px}
+.title{color:#000;font-weight:700}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:92px}.brand-copy{flex:1;min-width:0}.brand-logo{width:88px;height:88px;flex:0 0 auto;object-fit:contain;border:1px solid #000}.logo{color:#000;white-space:pre;overflow-x:auto;font-size:clamp(8px,1.8vw,12px);line-height:1.08;margin:8px 0}
+.status{color:#000;margin:9px 0}
+.line{margin:10px 0;white-space:pre-wrap}
+.answer{color:#000}
+.error{color:#000;border-left:3px solid #000;padding-left:8px}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+button,select{border:1px solid #000;background:#fff;color:#000;padding:7px 9px;font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.45;cursor:wait}
+.cat-logo{display:block;width:88px;height:88px;object-fit:contain;border:1px solid #000}.shortcut-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 16px}
+.shortcut{border:0;background:#fff;color:#000;padding:3px 0;display:block;text-align:left}
+.shortcut:hover{text-decoration:underline}
+.tabbar{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.tab-button[aria-selected="true"]{background:#000;color:#fff}
+.tab-panel{border-top:1px solid #000;margin-top:10px;padding-top:9px}
+.attach-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.file-label{border:1px solid #000;background:#fff;color:#000;padding:7px 9px;cursor:pointer}
+#attachments{display:none}
+#attachment-status{color:#000}
+.file-list{margin:5px 0 0;padding:0;list-style:none}
+.file-item{display:inline-block;border:1px solid #000;padding:2px 5px;margin:2px 4px 2px 0;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.history-panel{margin-top:10px}
+.history-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.history-status{min-height:20px}
+.conversation-list{display:grid;gap:5px}
+.conversation-item{display:flex;gap:7px;align-items:center;justify-content:space-between;border:1px solid #000;padding:6px}
+.conversation-item button{padding:4px 6px}
+.conversation-meta{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#input-area{display:flex;gap:8px;align-items:center;min-height:52px;border-top:1px solid #000;padding:5px 9px;padding-bottom:max(5px,env(safe-area-inset-bottom));background:#fff}
+#user-input{flex:1;min-width:0;background:#fff;color:#000;border:0;outline:0;font:14px ui-monospace,SFMono-Regular,Consolas,monospace}
+#send{color:#000;border-color:#000;background:#fff}
+.downloads{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}.download-button{border:1px solid #000;background:#fff;color:#000;padding:5px 8px;font:inherit;cursor:pointer}@media(max-width:520px){.brand{gap:8px}.brand-logo,.cat-logo{width:66px;height:66px}.shortcut-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main id="terminal" role="log" aria-live="polite">
+<section class="box">
+<div class="brand"><div class="brand-copy"><div class="title">GUINHO-CODE v4.0 · QWEN LOCAL</div>
+<pre class="logo">  ___          _          _                   ___            _
+ / __|  _  _  (_)  _ _   | |_    ___   ___   / __|  ___   __| |  ___
+| (_ | | || | | | | ' \  | ' \  / _ \ |___| | (__  / _ \ / _` | / -_)
+ \___|  \_,_| |_| |_||_| |_||_| \___/        \___| \___/ \__,_| \___|</pre></div><img class="cat-logo" src="/guinho-logo.svg" alt="Gatinho preto do Guinho-Code"></div>
+<div id="status" class="status">Qwen local · inicie o llama-server e toque em Conectar.</div><div class="line">LOCAL QWEN: mantenha o llama-server aberto no Termux. O histórico é salvo neste navegador.</div>
+<div class="toolbar"><span class="title">LOCAL · QWEN</span><button id="connect" type="button">Conectar</button><button id="continue" type="button" disabled>Continuar código</button><button id="clear" type="button" disabled>Nova conversa</button><button id="history-toggle" type="button">Histórico</button><button id="export-history" type="button">Exportar</button><button id="delete-history" type="button">Apagar histórico</button><button id="knowledge-search" type="button">Buscar base</button><button id="linguistic-analyze" type="button">Linguística</button><button id="install-pwa" type="button">Instalar PWA</button></div>
+<div class="tabbar" role="tablist" aria-label="Áreas do Guinho"><button class="tab-button" type="button" data-panel="attachments-panel" aria-selected="true">Anexos</button><button class="tab-button" type="button" data-panel="prompts-panel" aria-selected="false">Prompts</button><button class="tab-button" type="button" data-panel="history-panel" aria-selected="false">Histórico</button></div>
+<div id="attachments-panel" class="tab-panel">
+<div class="attach-row"><label class="file-label" for="attachments">Anexar documento</label><input id="attachments" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.java,.c,.cpp,.h,.cs,.xml,.yaml,.yml,.sql,.log"><span id="attachment-status">nenhum arquivo selecionado</span></div><ul id="file-list" class="file-list" aria-live="polite"></ul>
+</div>
+<div id="history-panel" class="history-panel tab-panel" hidden><div class="history-actions"><span class="title">CONVERSAS SALVAS</span><span id="history-status" class="history-status">carregando histórico local...</span></div><div id="conversation-list" class="conversation-list" aria-live="polite"></div></div>
+<div id="prompts-panel" class="tab-panel" hidden>
+<div class="title">PROMPTS DE ATALHO:</div>
+<div class="shortcut-grid">
+<button class="shortcut" data-cmd="/web">/web · jogo web</button>
+<button class="shortcut" data-cmd="/html">/html · página responsiva</button>
+<button class="shortcut" data-cmd="/canvas">/canvas · Canvas 2D</button>
+<button class="shortcut" data-cmd="/game">/game · jogo mobile</button>
+<button class="shortcut" data-cmd="/gamelibs">/gamelibs · assets/sprites</button>
+<button class="shortcut" data-cmd="/python">/python · script Python</button>
+<button class="shortcut" data-cmd="/cpp">/cpp · C++</button>
+<button class="shortcut" data-cmd="/csharp">/csharp · C#</button>
+<button class="shortcut" data-cmd="/react">/react · componente</button>
+<button class="shortcut" data-cmd="/api">/api · backend seguro</button>
+<button class="shortcut" data-cmd="/sql">/sql · banco de dados</button>
+<button class="shortcut" data-cmd="/debug">/debug · corrigir erro</button>
+<button class="shortcut" data-cmd="/review">/review · auditoria completa</button>
+<button class="shortcut" data-cmd="/pwa">/pwa · instalar no celular</button>
+<button class="shortcut" data-cmd="/files">/files · gerar arquivos e ZIP</button>
+<button class="shortcut" data-cmd="/wiki">/wiki · conceitos técnicos</button>
+<button class="shortcut" data-cmd="/mdn">/mdn · HTML CSS JS</button>
+<button class="shortcut" data-cmd="/w3schools">/w3schools · consulta rápida</button>
+<button class="shortcut" data-cmd="/stackoverflow">/stackoverflow · erros reais</button>
+<button class="shortcut" data-cmd="/devdocs">/devdocs · docs offline</button>
+<button class="shortcut" data-cmd="/libs">/libs · bibliotecas famosas</button>
+<button class="shortcut" data-cmd="/botbase">/botbase · respostas de bot</button>
+<button class="shortcut" data-cmd="/linguistica">/linguistica · NLP idiomas</button>
+<button class="shortcut" data-cmd="/typescript">/typescript · TS robusto</button>
+<button class="shortcut" data-cmd="/mobile">/mobile · Android/iOS</button>
+<button class="shortcut" data-cmd="/ai">/ai · IA e agentes</button>
+<button class="shortcut" data-cmd="/database">/database · banco/busca</button>
+<button class="shortcut" data-cmd="/tests">/tests · testes QA</button>
+<button class="shortcut" data-cmd="/security">/security · segurança</button>
+<button class="shortcut" data-cmd="/devops">/devops · deploy/CI</button>
+<button class="shortcut" data-cmd="/desktop">/desktop · app desktop</button>
+<button class="shortcut" data-cmd="/go">/go · APIs Go</button>
+<button class="shortcut" data-cmd="/rust">/rust · Rust</button>
+<button class="shortcut" data-cmd="/php">/php · Laravel/PHP</button>
+<button class="shortcut" data-cmd="/engines">/engines · engines jogos</button>
+</div>
+</div>
+</section>
+</main>
+<form id="input-area"><span>&gt;</span><input id="user-input" type="text" disabled autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Conecte para começar..."/><button id="send" type="submit" disabled>Enviar</button></form>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+(() => {
+'use strict';
+const ONLINE_API='http://127.0.0.1:8080/v1/chat/completions';
+const LOCAL_QWEN_MODE=true;
+const term=document.querySelector('#terminal'), status=document.querySelector('#status'), input=document.querySelector('#user-input');
+const connect=document.querySelector('#connect'), continueCode=document.querySelector('#continue'), clear=document.querySelector('#clear'), send=document.querySelector('#send'), knowledgeButton=document.querySelector('#knowledge-search'), linguisticButton=document.querySelector('#linguistic-analyze'), installButton=document.querySelector('#install-pwa');
+const historyToggle=document.querySelector('#history-toggle'), exportHistory=document.querySelector('#export-history'), deleteHistory=document.querySelector('#delete-history'), historyPanel=document.querySelector('#history-panel'), historyStatus=document.querySelector('#history-status'), conversationList=document.querySelector('#conversation-list');
+const fileInput=document.querySelector('#attachments'), fileList=document.querySelector('#file-list'), attachmentStatus=document.querySelector('#attachment-status');
+const tabButtons=[...document.querySelectorAll('[data-panel]')], tabPanels=[...document.querySelectorAll('.tab-panel')];
+const MAX_FILE_BYTES=2*1024*1024, MAX_TOTAL_BYTES=3*1024*1024, MAX_LOCAL_CONVERSATIONS=30, MAX_SAVED_MESSAGES=80, MAX_CONTEXT_MESSAGES=13;
+const CLIENT_KEY='guinho_client_id_v1', ACTIVE_CONVERSATION_KEY='guinho_active_conversation_v1', LEGACY_HISTORY_KEY='guinho_history', LOCAL_FALLBACK_KEY='guinho_conversations_v1';
+const system={role:'system',content:`Você é o Guinho-Code, um engenheiro de software sênior, analista de requisitos e arquiteto de soluções. Sua prioridade é compreender corretamente o objetivo do usuário antes de responder e entregar um resultado funcional, verificável e diretamente utilizável.
+
+REGRAS DE INTERPRETAÇÃO:
+1. Leia o pedido inteiro e identifique objetivo, contexto, plataforma, linguagem, restrições e resultado esperado.
+2. Não responda apenas à última frase se ela depender do contexto anterior.
+3. Se houver ambiguidade que altere materialmente a solução, faça uma pergunta objetiva; caso contrário, assuma a opção tecnicamente mais adequada e declare a suposição.
+4. Não invente recursos, APIs, bibliotecas, arquivos ou resultados de testes.
+5. Diferencie claramente código implementado, código sugerido e limitações do ambiente.
+
+REGRAS PARA PROGRAMAÇÃO:
+1. Analise a arquitetura antes de escrever.
+2. Entregue código completo e executável, sem placeholders, pseudocódigo, trechos omitidos ou comentários como "continue aqui".
+3. Preserve requisitos já definidos pelo usuário e não remova funcionalidades sem explicar.
+4. Para HTML, CSS e JavaScript, valide DOM, escopo, eventos, responsividade, touch, acessibilidade, tratamento de erros e fluxo assíncrono.
+5. Para jogos, preserve um único loop de animação, estados consistentes, colisões, resize e controles mobile.
+6. Para integrações de IA, nunca exponha chaves no cliente; use backend, variáveis de ambiente e streaming correto.
+7. Nunca revele raciocínio interno, cadeia de pensamento, tokens de raciocínio ou análise privada. Entregue apenas uma justificativa breve e a resposta final.
+8. Quando o usuário pedir arquivos, gere cada arquivo com o formato exato "===FILE: caminho/nome.ext===", seguido do conteúdo completo, e finalize com "===END FILE===". Não coloque explicações dentro desses blocos.
+9. Gere os blocos apenas para arquivos realmente solicitados e use caminhos seguros, sem dois pontos consecutivos.
+10. Quando o código for longo, organize a resposta em partes continuáveis e informe exatamente onde a continuação começa.
+11. Quando detectar um erro, explique a causa concreta, corrija-a e entregue a versão corrigida.
+12. Responda em português do Brasil, com objetividade e precisão. Não elogie sem evidência e não prometa algo que não foi testado.
+13. Quando houver blocos de arquivo, não interrompa o conteúdo com comentários, análise ou explicações; mantenha cada arquivo contínuo e completo.
+
+BASE DE CONHECIMENTO PRIORITÁRIA:
+1. Para conceitos teóricos, algoritmos, história, arquitetura de software e contexto técnico, use como referência a Wikipédia técnica, incluindo páginas como https://pt.wikipedia.org/wiki/Linguagem_de_programa%C3%A7%C3%A3o, https://en.wikipedia.org/wiki/Portal:Programming e WikiWikiWeb.
+2. Para HTML, CSS, JavaScript, Canvas, APIs do navegador, PWA e regras de sintaxe web, priorize a MDN Web Docs: https://developer.mozilla.org/.
+3. Para consulta rápida, exemplos didáticos e sintaxe básica de Python, Java, C#, SQL, HTML, CSS e JavaScript, use W3Schools como apoio: https://www.w3schools.com/.
+4. Para erros concretos, mensagens de exceção, bugs recorrentes e soluções já discutidas por programadores, considere Stack Overflow como fonte prática de investigação: https://stackoverflow.com/.
+5. Para documentação agregada e consulta rápida/offline de linguagens e bibliotecas, use DevDocs como referência: https://devdocs.io/.
+6. Para escolher bibliotecas e ecossistemas, considere: Python (NumPy, Pandas, Scikit-learn, TensorFlow, PyTorch, Django, Flask, Selenium, BeautifulSoup), TypeScript (Zod, tRPC, TanStack Query, Vite, Vitest), C#/.NET (ASP.NET Core, Entity Framework Core, Unity, System.Text.Json), Web (React, Vue, Angular, Tailwind CSS, Bootstrap, GSAP), Canvas/jogos (Three.js, Phaser, PixiJS, Fabric.js), Node.js (Express, Socket.IO, Prisma, Sequelize, Passport), Java (Spring Boot, Hibernate, JUnit, Mockito, Lombok), Mobile (React Native, Expo, Flutter, Kotlin, Swift), IA (OpenAI SDK, LangChain, LlamaIndex, Hugging Face, Ollama), dados (PostgreSQL, SQLite, Redis, Elasticsearch, Meilisearch), testes (Playwright, Cypress, Jest, Vitest, Testing Library), segurança (OWASP, Helmet, bcrypt, argon2, jose, rate limiting), DevOps (Docker, GitHub Actions, Vercel, Terraform, Kubernetes), desktop (Electron, Tauri, PySide, .NET MAUI), Go (Gin, Fiber, GORM, Cobra), Rust (Tokio, Axum, Actix, Serde, Bevy) e PHP (Laravel, Symfony, Composer, PHPUnit).
+7. Para bases de respostas de bots, diferencie datasets, frameworks e templates: Kaggle, CoQA, ChatterBot, Rasa, Botpress, Blip e bibliotecas de prompts podem ajudar, mas não substituem uma arquitetura com intents, contexto, fallback e revisão humana quando necessário.
+8. Não finja que consultou essas fontes em tempo real quando não houver navegação externa. Use-as como referências conhecidas e indique quando a resposta depender de verificação atualizada.
+9. Quando precisar de busca técnica no próprio domínio do Guinho, use a rota interna /api/knowledge/search, que pesquisa Wikipédia, Stack Overflow e catálogo curado de MDN, DevDocs, W3Schools, bibliotecas e bots.
+10. Ao recomendar bibliotecas, escolha por objetivo real: produção, simplicidade, mobile, jogo, IA, segurança, teste, banco, deploy ou manutenção. Explique a escolha e evite empilhar bibliotecas sem necessidade.
+
+BIBLIOTECA LINGUÍSTICA:
+1. Para regras gramaticais e estruturais multi-idioma, considere spaCy Models Directory e spaCy Matcher.
+2. Para Mandarim, Russo e análises linguísticas tradicionais de alta precisão, considere Stanza Stanford NLP.
+3. Para radicais e stemming em Inglês, Espanhol, Alemão, Italiano, Russo e Francês, considere Snowball Stemmer.
+4. Para correção ortográfica e gramatical offline, considere LanguageTool Development Wiki.
+5. Para detecção offline de idioma, considere Lingua-py.
+6. Para Português, considere NLTK, CoGrOO e Linguateca.
+7. Use a rota local /api/linguistics/analyze como apoio de idioma, intenção, palavras-chave e fontes linguísticas indicadas.
+
+BIBLIOTECA DE JOGOS:
+1. Para protótipos rápidos com Python/JavaScript e galeria de arte integrada, considere Microsoft MakeCode Arcade.
+2. Para ambiente integrado de código, pixel art e jogos 2D no navegador, considere microStudio.
+3. Para jogos retrô, fantasy console, sprites e mapas embutidos, considere TIC-80.
+4. Para assets gratuitos CC0, considere Kenney Assets.
+5. Para comunidade aberta de sprites, cenários e efeitos visuais, considere OpenGameArt.
+6. Para pacotes gratuitos de tilesets e assets independentes, considere Itch.io Free Game Assets.
+7. Para criar e animar sprites quadro a quadro, considere Piskel.
+8. Para pixel art open-source com camadas e animação, considere Pixelorama.
+9. Antes de recomendar asset ou motor, diferencie: primeiro protótipo de movimentação, estrutura inicial de pastas, sprites, cenário, áudio, UI ou exportação.
+
+FORMATO PADRÃO:
+- Comece pelo resultado ou diagnóstico.
+- Em tarefas de implementação, entregue a solução completa.
+- Em tarefas de análise, liste problemas reais por prioridade e proponha correções.
+- Termine com instruções práticas de execução e teste.`};
+const prompts={ '/web':'Crie um jogo web completo em HTML, CSS e JavaScript, responsivo e jogável no celular.', '/html':'Crie uma página HTML responsiva completa, acessível e sem dependências desnecessárias.', '/canvas':'Crie uma experiência Canvas 2D com loop único, resize correto, controles touch e teclado.', '/game':'Desenvolva um jogo mobile completo em Canvas com estados, colisões, pontuação, pausa e persistência.', '/gamelibs':'Escolha a melhor biblioteca de jogos para o objetivo: MakeCode Arcade, microStudio, TIC-80, Kenney Assets, OpenGameArt, Itch.io Free Game Assets, Piskel ou Pixelorama. Indique se o próximo passo deve ser primeiro protótipo de movimentação de personagem ou estrutura inicial de pastas.', '/python':'Escreva um programa Python completo, executável e com tratamento de erros.', '/cpp':'Desenvolva uma solução C++ completa com classes, validação, compilação e exemplo de uso.', '/csharp':'Escreva um componente C# completo com tipos, validação e exemplo de integração.', '/react':'Crie um componente React completo, acessível, responsivo e sem estado inconsistente.', '/api':'Implemente uma API segura com validação, tratamento de erros, variáveis de ambiente e exemplos de chamada.', '/sql':'Modele o banco e escreva SQL completo com tabelas, chaves, índices e consultas de exemplo.', '/debug':'Analise o código enviado, reproduza mentalmente o erro, explique a causa e entregue a correção completa.', '/review':'Faça uma auditoria completa de arquitetura, segurança, performance, acessibilidade e bugs; depois corrija os problemas.', '/pwa':'Transforme o projeto em PWA instalável, com manifest, ícones, service worker e comportamento offline.', '/files':'Gere o projeto completo em blocos ===FILE: nome.ext=== e ===END FILE=== para baixar os arquivos e o ZIP.', '/wiki':'Explique o conceito técnico usando referência enciclopédica de programação: definição, origem, uso prático, limitações e exemplo de código quando couber.', '/mdn':'Responda como consulta MDN: regras corretas de HTML, CSS, JavaScript, Canvas, APIs web ou PWA, com sintaxe válida e compatibilidade.', '/w3schools':'Responda como guia de consulta rápida: sintaxe, exemplo simples, exemplo completo e erro comum para evitar.', '/stackoverflow':'Analise o erro como investigação prática: causa provável, como confirmar, correção direta e prevenção.', '/devdocs':'Monte uma ficha de documentação rápida com assinatura, parâmetros, retorno, exemplos e observações de uso.', '/libs':'Indique bibliotecas adequadas por linguagem/ecossistema, compare opções e recomende a melhor para o projeto.', '/botbase':'Crie uma biblioteca de respostas de bot com intents, exemplos de perguntas, respostas, fallback, tom, tags e formato JSON/YAML quando solicitado.', '/linguistica':'Analise o texto com biblioteca linguística: idioma provável, intenção, palavras-chave, normalização, sinônimos e fontes como spaCy, Stanza, Snowball, LanguageTool, Lingua-py, NLTK, CoGrOO e Linguateca.', '/typescript':'Projete uma solução TypeScript robusta usando tipagem, validação com Zod, build com Vite/Next quando couber e testes com Vitest.', '/mobile':'Indique ou implemente a melhor abordagem mobile entre PWA, React Native/Expo, Flutter, Kotlin e Swift, justificando por custo e manutenção.', '/ai':'Projete recurso de IA com OpenAI SDK, LangChain, LlamaIndex, Hugging Face ou Ollama, separando API, contexto, memória, custo e segurança.', '/database':'Modele persistência com PostgreSQL, SQLite, Redis, Prisma, Drizzle, Elasticsearch ou Meilisearch conforme necessidade de consulta, cache e escala.', '/tests':'Crie estratégia de testes com Playwright, Cypress, Jest, Vitest e Testing Library, incluindo casos críticos e comando de execução.', '/security':'Faça auditoria de segurança com OWASP, validação, autenticação, hash de senha, JWT seguro, rate limit, headers e proteção de chaves.', '/devops':'Monte fluxo de deploy e CI/CD com Docker, GitHub Actions, Vercel, variáveis de ambiente, logs, rollback e monitoramento.', '/desktop':'Indique ou implemente app desktop com Electron, Tauri, PySide/Qt ou .NET MAUI, comparando tamanho, performance e manutenção.', '/go':'Escreva API ou ferramenta em Go usando Gin/Fiber, GORM, Cobra ou gRPC quando fizer sentido.', '/rust':'Escreva solução Rust com Tokio, Axum/Actix, Serde, Tauri ou Bevy, priorizando segurança e performance.', '/php':'Crie solução PHP/Laravel ou Symfony com Composer, validação, rotas, banco e testes com PHPUnit.', '/engines':'Compare engines de jogos como Godot, Unity, Unreal, Phaser, Love2D e Bevy, recomendando a melhor para o projeto.' };
+let connected=true,busy=false,controller=null,activeMode='online',deferredInstallPrompt=null,remoteHistoryEnabled=false,idbPromise=null;
+let clientId=getClientId(), activeConversationId=localStorage.getItem(ACTIVE_CONVERSATION_KEY)||newConversationId(), conversationsCache=[], history=[system];
+localStorage.setItem(CLIENT_KEY,clientId);
+localStorage.setItem(ACTIVE_CONVERSATION_KEY,activeConversationId);
+const LOCAL_FALLBACK_LIBRARY=[
+ {terms:['html','css','javascript','js','canvas','pwa','front'],title:'Web/Canvas/PWA',tip:'Use HTML/CSS/JavaScript com Canvas quando precisar de arquivo unico, jogo web, interface leve ou PWA instalavel. Priorize eventos, resize, touch, estado e tratamento de erro.'},
+ {terms:['python','py','automacao','script','dados'],title:'Python',tip:'Use Python para automacao, scripts, dados e prototipos. Para web, Flask/Django; para dados, Pandas/NumPy; para IA local, avalie Hugging Face/Ollama.'},
+ {terms:['erro','bug','debug','falha','exception','traceback','corrija'],title:'Diagnostico de erro',tip:'Isole a mensagem exata, arquivo/linha, entrada que reproduz, dependencia/versao e comportamento esperado. Corrija primeiro a causa, depois adicione teste de regressao.'},
+ {terms:['jogo','game','sprite','kenney','piskel','pixelorama','makecode','tic-80','microstudio'],title:'Biblioteca de jogos',tip:'Para prototipo rapido use MakeCode Arcade, microStudio ou TIC-80. Para assets use Kenney/OpenGameArt/Itch.io. Para sprites use Piskel ou Pixelorama.'},
+ {terms:['linguistica','idioma','spacy','stanza','snowball','languagetool','cogroo','linguateca'],title:'Biblioteca linguistica',tip:'Use Lingua-py para detectar idioma, spaCy/Matcher para regras, Stanza para analise tradicional, Snowball para radicais e CoGrOO/Linguateca para portugues.'},
+ {terms:['banco','database','sql','postgres','sqlite','redis','prisma','drizzle'],title:'Banco de dados',tip:'Use PostgreSQL para persistencia principal, SQLite para local, Redis para cache/fila e Prisma/Drizzle para ORM tipado.'},
+ {terms:['seguranca','security','auth','jwt','senha','rate'],title:'Seguranca',tip:'Valide entrada no servidor, proteja chaves em variaveis de ambiente, aplique rate limit, use argon2/bcrypt para senha e jose/JWT com expiracao curta.'}
+];
+function buildLocalFallbackAnswer(text,error){
+ const normalized=String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const matches=LOCAL_FALLBACK_LIBRARY.filter(item=>item.terms.some(term=>normalized.includes(term))).slice(0,4);
+ const chosen=matches.length?matches:LOCAL_FALLBACK_LIBRARY.slice(0,3);
+ const reason=error?.name==='AbortError'?'a requisicao foi interrompida ou demorou demais':'os provedores de IA estao lentos ou indisponiveis';
+ return '[MODO BIBLIOTECA LOCAL]\n'+
+  'Nao vou deixar voce sem resposta: '+reason+'. Esta resposta foi gerada pela biblioteca local do Guinho, sem depender do modelo online.\n\n'+
+  chosen.map((item,index)=>(index+1)+'. '+item.title+': '+item.tip).join('\n')+
+  '\n\nQuando o servidor de IA voltar, envie \"continue\" ou reformule o pedido para eu gerar a versao completa com codigo.';
+}
+function newConversationId(){return 'cv_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10)}
+function getClientId(){const saved=localStorage.getItem(CLIENT_KEY);if(saved&&/^[a-zA-Z0-9_-]{12,96}$/.test(saved))return saved;return 'gu_'+(crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):Math.random().toString(36).slice(2)+Date.now().toString(36))}
+function activeMessages(){return history.slice(1).filter(message=>['user','assistant'].includes(message.role)&&typeof message.content==='string').slice(-MAX_SAVED_MESSAGES).map(message=>({role:message.role,content:message.content,createdAt:message.createdAt||new Date().toISOString()}))}
+function titleFromMessages(messages){const first=(messages.find(message=>message.role==='user')?.content||'Nova conversa').replace(/\s+/g,' ').trim();return (first||'Nova conversa').slice(0,70)}
+function conversationFromHistory(){const messages=activeMessages();return {id:activeConversationId,title:titleFromMessages(messages),messages,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
+function openHistoryDb(){if(!('indexedDB'in window))return Promise.reject(new Error('IndexedDB indisponível'));if(!idbPromise){idbPromise=new Promise((resolve,reject)=>{const request=indexedDB.open('guinho-code-history',1);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains('conversations')){const store=db.createObjectStore('conversations',{keyPath:'id'});store.createIndex('updatedAt','updatedAt')}};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error('Falha ao abrir histórico'))})}return idbPromise}
+async function idbGetAll(){const db=await openHistoryDb();return new Promise((resolve,reject)=>{const tx=db.transaction('conversations','readonly'),store=tx.objectStore('conversations'),req=store.getAll();req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error)})}
+async function idbPut(conversation){const db=await openHistoryDb();return new Promise((resolve,reject)=>{const tx=db.transaction('conversations','readwrite'),store=tx.objectStore('conversations');store.put(conversation);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
+async function idbDelete(id){const db=await openHistoryDb();return new Promise((resolve,reject)=>{const tx=db.transaction('conversations','readwrite'),store=tx.objectStore('conversations');id?store.delete(id):store.clear();tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
+async function loadLocalConversations(){try{return (await idbGetAll()).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))}catch{try{const fallback=JSON.parse(localStorage.getItem(LOCAL_FALLBACK_KEY)||'[]');return Array.isArray(fallback)?fallback.sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))):[]}catch{return []}}}
+async function saveLocalConversation(conversation){conversation.updatedAt=new Date().toISOString();try{await idbPut(conversation);const all=await loadLocalConversations();for(const item of all.slice(MAX_LOCAL_CONVERSATIONS))await idbDelete(item.id)}catch{let fallback=await loadLocalConversations();fallback=fallback.filter(item=>item.id!==conversation.id);fallback.unshift(conversation);localStorage.setItem(LOCAL_FALLBACK_KEY,JSON.stringify(fallback.slice(0,MAX_LOCAL_CONVERSATIONS)))}}
+async function deleteLocalConversations(id){try{await idbDelete(id)}catch{if(id){const fallback=(await loadLocalConversations()).filter(item=>item.id!==id);localStorage.setItem(LOCAL_FALLBACK_KEY,JSON.stringify(fallback))}else localStorage.removeItem(LOCAL_FALLBACK_KEY)}}
+async function migrateLegacyHistory(){const current=await loadLocalConversations();if(current.length)return current;let legacy=[];try{legacy=JSON.parse(localStorage.getItem(LEGACY_HISTORY_KEY)||'[]')}catch{}if(Array.isArray(legacy)&&legacy.length){const conversation={id:activeConversationId,title:titleFromMessages(legacy),messages:legacy.filter(message=>['user','assistant'].includes(message.role)),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};await saveLocalConversation(conversation);localStorage.removeItem(LEGACY_HISTORY_KEY);return [conversation]}return current}
+function setHistoryStatus(text){historyStatus.textContent=text}
+function clearRenderedConversation(){term.querySelectorAll('.line,.downloads').forEach(node=>node.remove())}
+function renderMessages(messages){clearRenderedConversation();messages.forEach(message=>{if(message.role==='user')add('> '+message.content);else if(message.role==='assistant'){add('GUINHO > '+message.content,'answer');addDownloadPanel(message.content)}})}
+function renderConversationList(){conversationList.innerHTML='';if(!conversationsCache.length){conversationList.textContent='Nenhuma conversa salva ainda.';return}conversationsCache.forEach(conversation=>{const row=document.createElement('div');row.className='conversation-item';const meta=document.createElement('span');meta.className='conversation-meta';meta.textContent=(conversation.id===activeConversationId?'* ':'')+conversation.title+' · '+new Date(conversation.updatedAt||conversation.createdAt||Date.now()).toLocaleString('pt-BR');const open=document.createElement('button');open.type='button';open.textContent='Abrir';open.disabled=busy||conversation.id===activeConversationId;open.addEventListener('click',()=>loadConversation(conversation.id));const remove=document.createElement('button');remove.type='button';remove.textContent='Excluir';remove.disabled=busy;remove.addEventListener('click',()=>removeConversation(conversation.id));row.append(meta,open,remove);conversationList.append(row)})}
+async function refreshConversationCache(){conversationsCache=await loadLocalConversations();renderConversationList()}
+async function saveRemoteConversation(){return null}
+
+async function persistCurrentConversation(sync=true){const conversation=conversationFromHistory();if(!conversation.messages.length)return;await saveLocalConversation(conversation);await refreshConversationCache();if(sync)saveRemoteConversation(conversation)}
+async function loadRemoteConversations(){setHistoryStatus('histórico local ativo')}
+
+async function loadConversation(id){if(busy)return;await persistCurrentConversation(false);const conversation=(await loadLocalConversations()).find(item=>item.id===id);if(!conversation)return;activeConversationId=id;localStorage.setItem(ACTIVE_CONVERSATION_KEY,id);history=[system,...conversation.messages];renderMessages(conversation.messages);await refreshConversationCache();setHistoryStatus('conversa carregada');controls();input.focus()}
+async function removeConversation(id){if(busy)return;if(!confirm('Excluir esta conversa?'))return;await deleteLocalConversations(id);fetch('/api/history',{method:'POST',headers:{'Content-Type':'application/json','X-Guinho-Client-Id':clientId},body:JSON.stringify({action:'delete',clientId,conversationId:id})}).catch(()=>{});if(id===activeConversationId){activeConversationId=newConversationId();localStorage.setItem(ACTIVE_CONVERSATION_KEY,activeConversationId);history=[system];clearRenderedConversation();add('[HISTÓRICO] Conversa excluída.')}await refreshConversationCache();controls();input.focus()}
+async function exportAllHistory(){await persistCurrentConversation(false);const conversations=await loadLocalConversations();if(!conversations.length){add('[HISTÓRICO] Não há conversas para exportar.','error');return}const json=JSON.stringify({app:'Guinho-Code',clientId,exportedAt:new Date().toISOString(),conversations},null,2);const txt=conversations.map(conversation=>'# '+conversation.title+'\n'+conversation.messages.map(message=>(message.role==='user'?'> ':'GUINHO > ')+message.content).join('\n\n')).join('\n\n---\n\n');if(window.JSZip)await downloadZip([{name:'guinho-historico.json',content:json},{name:'guinho-historico.txt',content:txt}],'guinho-historico.zip');else downloadText('guinho-historico.json',json);setHistoryStatus('histórico exportado')}
+async function deleteAllHistory(){if(busy)return;if(!confirm('Apagar todo o histórico deste navegador?'))return;await deleteLocalConversations();localStorage.removeItem(LEGACY_HISTORY_KEY);localStorage.removeItem(LOCAL_FALLBACK_KEY);fetch('/api/history',{method:'POST',headers:{'Content-Type':'application/json','X-Guinho-Client-Id':clientId},body:JSON.stringify({action:'deleteAll',clientId})}).catch(()=>{});activeConversationId=newConversationId();localStorage.setItem(ACTIVE_CONVERSATION_KEY,activeConversationId);history=[system];clearRenderedConversation();add('[HISTÓRICO] Histórico apagado.');await refreshConversationCache();setHistoryStatus('histórico local vazio');controls();input.focus()}
+async function startNewConversation(){if(busy)return;await persistCurrentConversation(true);activeConversationId=newConversationId();localStorage.setItem(ACTIVE_CONVERSATION_KEY,activeConversationId);history=[system];clearRenderedConversation();add('[SESSÃO] Nova conversa iniciada.');await refreshConversationCache();controls();input.focus()}
+async function initHistory(){await migrateLegacyHistory();await refreshConversationCache();const current=conversationsCache.find(item=>item.id===activeConversationId)||conversationsCache[0];if(current){activeConversationId=current.id;localStorage.setItem(ACTIVE_CONVERSATION_KEY,current.id);history=[system,...current.messages];renderMessages(current.messages);setHistoryStatus('histórico local carregado')}else setHistoryStatus('histórico local vazio');loadRemoteConversations()}
+function activatePanel(panelId){tabPanels.forEach(panel=>panel.hidden=panel.id!==panelId);tabButtons.forEach(button=>button.setAttribute('aria-selected',button.dataset.panel===panelId?'true':'false'));if(panelId==='history-panel')refreshConversationCache()}
+function renderFiles(){const files=[...fileInput.files];fileList.innerHTML='';attachmentStatus.textContent=files.length?files.length+' arquivo(s) selecionado(s)':'nenhum arquivo selecionado';files.forEach(file=>{const li=document.createElement('li');li.className='file-item';li.textContent=file.name+' ('+Math.ceil(file.size/1024)+' KB)';fileList.append(li)})}
+fileInput.addEventListener('change',renderFiles);
+let pdfModulePromise=null;
+async function extractPdfText(file){pdfModulePromise??=import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.mjs');const pdfjs=await pdfModulePromise;const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),disableWorker:true}).promise;const pages=[];for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){const page=await pdf.getPage(pageNo);const content=await page.getTextContent();pages.push(content.items.map(item=>item.str||'').join(' '));if(pages.join('\n').length>100000)break}return pages.join('\n')}
+async function prepareAttachments(files){const blocks=[],names=[];let total=0;for(const file of files){if(file.size>MAX_FILE_BYTES)throw new Error(file.name+' excede o limite de 2 MB');if(total+file.size>MAX_TOTAL_BYTES)throw new Error('O total dos anexos não pode exceder 3 MB');total+=file.size;const lower=file.name.toLowerCase();let extracted;if(lower.endsWith('.pdf'))extracted=await extractPdfText(file);else if(/\.(txt|md|csv|json|html|css|js|ts|py|java|c|cpp|h|cs|xml|yaml|yml|sql|log)$/i.test(lower)||file.type.startsWith('text/'))extracted=await file.text();else throw new Error(file.name+': formato não suportado; use PDF, TXT ou arquivo de código');blocks.push('\n\n===== DOCUMENTO: '+file.name+' =====\n'+extracted.slice(0,100000));names.push(file.name)}return {text:blocks.join(''),names}}
+function parseGeneratedFiles(text){text=String(text||'').replace(/\r\n?/g,'\n');const files=[];const pattern=/===FILE:\s*([^=\n]+?)===\n([\s\S]*?)\n===END FILE===/g;let match;while((match=pattern.exec(text))){const name=match[1].trim().replace(/^[/\\]+/,'').replace(/\.\./g,'_');if(name&&match[2].trim())files.push({name,content:match[2]})}return files}
+function downloadText(name,content){const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}
+async function downloadZip(files,zipName='guinho-projeto.zip'){if(!window.JSZip){add('[DOWNLOAD] Biblioteca ZIP ainda carregando. Tente novamente.','error');return}const zip=new JSZip();files.forEach(file=>zip.file(file.name,file.content));const blob=await zip.generateAsync({type:'blob'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=zipName;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}
+function addDownloadPanel(answer){const files=parseGeneratedFiles(answer);if(!files.length)return;const panel=document.createElement('div');panel.className='downloads';const zip=document.createElement('button');zip.className='download-button';zip.type='button';zip.textContent='Baixar ZIP';zip.addEventListener('click',()=>downloadZip(files));panel.append(zip);files.forEach(file=>{const button=document.createElement('button');button.className='download-button';button.type='button';button.textContent='Baixar '+file.name;button.addEventListener('click',()=>downloadText(file.name,file.content));panel.append(button)});term.append(panel);term.scrollTop=term.scrollHeight}
+function stripInternalReasoning(text){return String(text||'').replace(/<think>[\s\S]*?(?:<\/think>|$)/gi,'').replace(/<analysis>[\s\S]*?(?:<\/analysis>|$)/gi,'').replace(/<reasoning>[\s\S]*?(?:<\/reasoning>|$)/gi,'').trim()}
+function add(text,kind=''){const node=document.createElement('div');node.className='line '+kind;node.textContent=text;term.append(node);term.scrollTop=term.scrollHeight;return node}
+function setStatus(text){status.textContent=text}
+function controls(){input.disabled=busy;send.disabled=busy;clear.disabled=!connected||busy;continueCode.disabled=!connected||busy||history.length<3;knowledgeButton.disabled=busy;linguisticButton.disabled=busy;historyToggle.disabled=busy;exportHistory.disabled=busy;deleteHistory.disabled=busy;connect.disabled=busy;connect.textContent=connected?'Reconectar':'Conectar';renderConversationList()}
+function updateConnection(ok,message){connected=ok;setStatus(message);controls();if(ok)input.focus()}
+function formatKnowledgeResults(data){
+ const lines=['[BASE] Busca: '+data.query];
+ const results=Array.isArray(data.results)?data.results:[];
+ if(!results.length)lines.push('Nenhum resultado encontrado nas fontes configuradas.');
+ results.slice(0,10).forEach((item,index)=>{
+  lines.push((index+1)+'. ['+item.source+'] '+item.title);
+  if(item.snippet)lines.push('   '+item.snippet);
+  if(item.url)lines.push('   '+item.url);
+ });
+ if(Array.isArray(data.warnings)&&data.warnings.length)lines.push('Avisos: '+data.warnings.join(' | '));
+ return lines.join('\n');
+}
+function formatLinguisticResults(data){
+ const lines=['[LINGUÍSTICA] Idioma provável: '+data.detectedLanguage.label+' ('+data.detectedLanguage.code+') · confiança '+data.detectedLanguage.confidence];
+ const intents=Array.isArray(data.intents)?data.intents:[];
+ lines.push('Intenções: '+(intents.length?intents.map(item=>item.label).join(', '):'não identificada'));
+ const keywords=Array.isArray(data.keywords)?data.keywords:[];
+ lines.push('Palavras-chave: '+(keywords.length?keywords.map(item=>item.word).join(', '):'nenhuma'));
+ const resources=Array.isArray(data.resources)?data.resources:[];
+ if(resources.length){lines.push('Fontes indicadas:');resources.slice(0,8).forEach(item=>lines.push('- '+item.title+' · '+item.url))}
+ return lines.join('\n');
+}
+async function getLinguisticContext(){return ''}
+
+async function analyzeLinguistics(){
+ const query=input.value.trim();
+ if(!query){add('[LINGUÍSTICA] Digite primeiro o texto que quer analisar.','error');input.focus();return}
+ busy=true;controls();setStatus('Analisando idioma e intenção...');
+ try{
+  const response=await fetch('/api/linguistics/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:query})});
+  const data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Falha na análise linguística');
+  add(formatLinguisticResults(data));
+  setStatus('Análise linguística concluída.');
+ }catch(error){
+  add('[LINGUÍSTICA] Erro: '+(error.message||error),'error');
+  setStatus('Análise linguística indisponível.');
+ }finally{
+  busy=false;controls();input.focus();
+ }
+}
+async function searchKnowledge(){
+ const query=input.value.trim();
+ if(!query){add('[BASE] Digite primeiro o termo, erro ou biblioteca que quer pesquisar.','error');input.focus();return}
+ busy=true;controls();setStatus('Buscando na base técnica do Guinho...');
+ try{
+  const response=await fetch('/api/knowledge/search?q='+encodeURIComponent(query),{cache:'no-store'});
+  const data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Falha na busca');
+  add(formatKnowledgeResults(data));
+  setStatus('Busca concluída no mesmo domínio.');
+ }catch(error){
+  add('[BASE] Erro na busca: '+(error.message||error),'error');
+  setStatus('Busca indisponível no momento.');
+ }finally{
+  busy=false;controls();input.focus();
+ }
+}
+async function checkServer(silent=false){
+ connect.disabled=true;
+ if(!silent)setStatus('Verificando Qwen local...');
+ const healthController=new AbortController();
+ const timer=setTimeout(()=>healthController.abort(),6000);
+ try{
+  const r=await fetch('http://127.0.0.1:8080/health',{cache:'no-store',signal:healthController.signal});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const data=await r.json().catch(()=>({}));
+  updateConnection(true,'QWEN LOCAL ATIVO · '+(data.status||'servidor pronto'));
+  if(!silent)add('[OK] Qwen local conectado.');
+ }catch(ex){
+  updateConnection(false,'QWEN LOCAL OFFLINE · abra o llama-server no Termux');
+  if(!silent)add('[AVISO] Qwen local indisponível: '+(ex.message||ex),'error');
+ }finally{
+  clearTimeout(timer);
+  connect.disabled=false;
+  controls();
+ }
+}
+function decodeSSE(buffer,onPayload){
+ // llama-server pode usar CRLF (\r\n) no SSE; normalize antes de separar eventos.
+ buffer=buffer.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+ let index;
+ while((index=buffer.indexOf('\n\n'))!==-1){
+  const frame=buffer.slice(0,index);buffer=buffer.slice(index+2);
+  for(const row of frame.split('\n'))if(row.startsWith('data: '))onPayload(row.slice(6));
+ }
+ return buffer;
+}
+connect.addEventListener('click',checkServer);
+knowledgeButton.addEventListener('click',searchKnowledge);
+linguisticButton.addEventListener('click',analyzeLinguistics);
+clear.addEventListener('click',startNewConversation);
+historyToggle.addEventListener('click',()=>activatePanel('history-panel'));
+tabButtons.forEach(button=>button.addEventListener('click',()=>activatePanel(button.dataset.panel)));
+exportHistory.addEventListener('click',exportAllHistory);
+deleteHistory.addEventListener('click',deleteAllHistory);
+continueCode.addEventListener('click',()=>{if(!connected||busy||history.length<3)return;input.value='Continue exatamente a partir do ponto onde o código anterior parou. Não repita trechos já enviados; entregue somente a continuação.';document.querySelector('#input-area').requestSubmit()});
+document.querySelectorAll('[data-cmd]').forEach(button=>button.addEventListener('click',()=>{if(!busy){input.value=prompts[button.dataset.cmd];input.focus()}}));
+document.querySelector('#input-area').addEventListener('submit',async event=>{
+ event.preventDefault();const text=input.value.trim();if(busy||!text)return;if(!connected){await checkServer();if(!connected)return;}
+ let savedUser={role:'user',content:text};input.value='';add('> '+text+(fileInput.files.length?' · '+[...fileInput.files].map(file=>file.name).join(', '):''));const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta com Qwen local...');controller=new AbortController();let answer='';let requestTimer=null;
+ try{
+  const built=await prepareAttachments([...fileInput.files]);
+  const linguisticContext=await getLinguisticContext(text);
+  const requestUser={role:'user',content:text+built.text+linguisticContext};
+  savedUser={role:'user',content:text+(built.names.length?'\n[Anexos: '+built.names.join(', ')+']':'')};
+  const context=[history[0], ...[...history.slice(1),requestUser].slice(-(MAX_CONTEXT_MESSAGES-1))];
+  const url=ONLINE_API;
+  const avoidProviders=new Set();
+  let lastError=null;
+  requestTimer=setTimeout(()=>controller.abort(),45000);
+  const requestedTokens=/\b(c[oó]digo|arquivo|implemente|desenvolva|programa|jogo|script|api|site|pwa)\b/i.test(text)?4096:2048;
+  for(let attempt=0;attempt<3;attempt++){
+   answer='';
+   out.textContent='GUINHO > '+(attempt?'[reconectando...]':'[processando...]');
+   let activeProvider='';
+   try{
+    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'qwen',messages:context,stream:true,temperature:0.55,top_p:0.9,max_tokens:requestedTokens}),signal:controller.signal});
+    activeProvider=response.headers.get('x-guinho-provider')||'';
+    if(!response.ok||!response.body){
+      let detail='';
+      try{detail=await response.text()}catch{}
+      try{
+        const failurePayload=JSON.parse(detail);
+        (failurePayload.providers||[]).forEach(item=>{if(item?.provider)avoidProviders.add(item.provider)});
+      }catch{}
+      const error=new Error('HTTP '+response.status);
+      error.detail=detail.slice(0,300);
+      throw error;
+    }
+    const reader=response.body.getReader(),decoder=new TextDecoder();let remainder='',streamError=null;
+    const onPayload=payload=>{if(payload==='[DONE]')return;try{const event=JSON.parse(payload);if(event.error){streamError=new Error(event.error.message||'A fonte interrompeu a resposta');streamError.provider=event.provider||activeProvider;return}const delta=event.choices?.[0]?.delta||{};const token=delta.content||'';if(token){answer+=token;out.textContent='GUINHO > '+stripInternalReasoning(answer)}else if(delta.reasoning){out.textContent='GUINHO > [processando...]'}term.scrollTop=term.scrollHeight}catch{}};
+    while(true){const {value,done}=await reader.read();if(done)break;remainder=decodeSSE(remainder+decoder.decode(value,{stream:true}),onPayload)}
+    remainder=decodeSSE(remainder+decoder.decode(),onPayload);
+    if(streamError){if(streamError.provider)avoidProviders.add(streamError.provider);throw streamError}
+    answer=stripInternalReasoning(answer);
+    if(!answer.trim())throw new Error('EMPTY_RESPONSE');
+    lastError=null;break;
+   }catch(error){
+    lastError=error;
+    if(error.provider)avoidProviders.add(error.provider);
+    else if(activeProvider)avoidProviders.add(activeProvider);
+    if(error.name==='AbortError')throw error;
+    if(attempt===2)throw error;
+    setStatus('Fonte indisponível; alternando servidor... tentativa '+(attempt+2)+'/3');
+    await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
+   }
+  }
+  if(lastError)throw lastError;
+  if(answer){const now=new Date().toISOString();history.push({...savedUser,createdAt:now},{role:'assistant',content:answer,createdAt:new Date().toISOString()});await persistCurrentConversation(true);addDownloadPanel(answer);fileInput.value='';renderFiles();setStatus('QWEN LOCAL ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
+ }catch(ex){const fallback=buildLocalFallbackAnswer(text,ex);out.textContent='GUINHO > '+fallback;out.classList.remove('error');const now=new Date().toISOString();history.push({...savedUser,createdAt:now},{role:'assistant',content:fallback,createdAt:new Date().toISOString()});await persistCurrentConversation(false);setStatus('Qwen local indisponível; biblioteca local ativada.');}
+  finally{if(requestTimer)clearTimeout(requestTimer);busy=false;controller=null;controls();input.focus()}
+});
+installButton.addEventListener('click',async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;return}add('[PWA] Use o menu do navegador e escolha "Instalar aplicativo".')});
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event});
+window.addEventListener('appinstalled',()=>add('[PWA] Guinho-Code instalado neste dispositivo.'));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}));
+controls();
+initHistory().finally(()=>checkServer());
+setInterval(()=>{if(!busy)checkServer(true)},120000);
+window.addEventListener('online',()=>{if(!busy)checkServer(true)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!busy)checkServer(true)});
+})();
+</script>
+</body>
+</html>
