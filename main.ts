@@ -1,6 +1,6 @@
 import { tokenize } from './lexer.ts';
 import { parse } from './parser.ts';
-import { Game } from './runtime/game.ts';
+import { Game } from './game.ts';
 import { BIT_LIBRARY, type LibraryItem } from './library-data.ts';
 
 const STARTER_TEMPLATES: Record<string, (title: string) => string> = {

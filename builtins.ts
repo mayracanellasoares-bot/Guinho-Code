@@ -39,7 +39,9 @@ export function createBuiltins(context?: Partial<BuiltinContext>): Map<string, B
     };
     const raw = String(args[0] ?? '').toLowerCase();
     const key = aliases[raw] ?? raw;
-    return isKeyDown(key);
+    // Keep both the browser key value (for example " ") and the
+    // Portuguese command name available to custom runtimes and tests.
+    return isKeyDown(key) || (key !== raw && isKeyDown(raw));
   };
 
   const toqueFn: Builtin = (): boolean => {

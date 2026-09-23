@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { test } from 'node:test';
-import handler, { getProviders } from './chat.js';
+import handler, { getProviders, resetRuntimeState } from './chat.js';
 
 class ResponseRecorder extends EventEmitter {
   chunks = [];
@@ -16,7 +16,7 @@ class ResponseRecorder extends EventEmitter {
   status(code) { this.status = code; return this; }
 }
 
-test('stream interruption emits parseable SSE error and completion frames', async () => {
+test('stream sem conteúdo tenta o failover e termina com erro HTTP se não houver reserva', async () => {
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.OPENROUTER_API_KEY;
   const originalOrder = process.env.GUINHO_PROVIDER_ORDER;
@@ -28,11 +28,91 @@ test('stream interruption emits parseable SSE error and completion frames', asyn
   const response = new ResponseRecorder();
   try {
     await handler({ method: 'POST', body: { messages: [{ role: 'user', content: 'ping' }] } }, response);
+    assert.equal(response.status, 503);
+    assert.equal(response.body.retryable, true);
+    assert.equal(response.body.providers[0].reason, 'stream_error');
+    assert.deepEqual(response.chunks, []);
+  } finally {
+    resetRuntimeState();
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = originalKey;
+    if (originalOrder === undefined) delete process.env.GUINHO_PROVIDER_ORDER;
+    else process.env.GUINHO_PROVIDER_ORDER = originalOrder;
+  }
+});
+
+test('stream sem conteúdo muda para o próximo provedor antes de enviar os headers', async () => {
+  const previous = {
+    groq: process.env.GROQ_API_KEY,
+    openrouter: process.env.OPENROUTER_API_KEY,
+    order: process.env.GUINHO_PROVIDER_ORDER
+  };
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  process.env.GROQ_API_KEY = 'groq-test';
+  process.env.OPENROUTER_API_KEY = 'openrouter-test';
+  process.env.GUINHO_PROVIDER_ORDER = 'groq,openrouter';
+  globalThis.fetch = async (url) => {
+    calls += 1;
+    if (url.includes('groq.com')) {
+      return new Response(new ReadableStream({
+        start(controller) { controller.error(new Error('groq disconnected')); }
+      }), { status: 200 });
+    }
+    return new Response(
+      'data: {"choices":[{"delta":{"content":"fallback"}}]}\n\ndata: [DONE]\n\n',
+      { status: 200, headers: { 'Content-Type': 'text/event-stream' } }
+    );
+  };
+  const response = new ResponseRecorder();
+  try {
+    await handler({ method: 'POST', body: { messages: [{ role: 'user', content: 'ping' }] } }, response);
     assert.equal(response.status, 200);
+    assert.equal(response.headers['X-Guinho-Provider'], 'openrouter-1');
+    assert.equal(calls, 2);
     const frames = response.chunks.join('').split('\n\n').filter(Boolean);
-    assert.equal(JSON.parse(frames[0].slice(6)).error.code, 'UPSTREAM_STREAM_FAILED');
+    assert.equal(JSON.parse(frames[0].slice(6)).choices[0].delta.content, 'fallback');
     assert.equal(frames[1], 'data: [DONE]');
   } finally {
+    resetRuntimeState();
+    globalThis.fetch = originalFetch;
+    if (previous.groq === undefined) delete process.env.GROQ_API_KEY;
+    else process.env.GROQ_API_KEY = previous.groq;
+    if (previous.openrouter === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = previous.openrouter;
+    if (previous.order === undefined) delete process.env.GUINHO_PROVIDER_ORDER;
+    else process.env.GUINHO_PROVIDER_ORDER = previous.order;
+  }
+});
+
+test('interrupção depois do primeiro conteúdo mantém SSE válido para o cliente', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.OPENROUTER_API_KEY;
+  const originalOrder = process.env.GUINHO_PROVIDER_ORDER;
+  process.env.OPENROUTER_API_KEY = 'test-key';
+  process.env.GUINHO_PROVIDER_ORDER = 'openrouter';
+  let sent = false;
+  globalThis.fetch = async () => new Response(new ReadableStream({
+    pull(controller) {
+      if (!sent) {
+        sent = true;
+        controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'));
+      } else {
+        controller.error(new Error('upstream disconnected'));
+      }
+    }
+  }), { status: 200 });
+  const response = new ResponseRecorder();
+  try {
+    await handler({ method: 'POST', body: { messages: [{ role: 'user', content: 'ping' }] } }, response);
+    assert.equal(response.status, 200);
+    const frames = response.chunks.join('').split('\n\n').filter(Boolean);
+    assert.equal(JSON.parse(frames[0].slice(6)).choices[0].delta.content, 'partial');
+    assert.equal(JSON.parse(frames[1].slice(6)).error.code, 'UPSTREAM_STREAM_FAILED');
+    assert.equal(frames[2], 'data: [DONE]');
+  } finally {
+    resetRuntimeState();
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env.OPENROUTER_API_KEY;
     else process.env.OPENROUTER_API_KEY = originalKey;
@@ -53,6 +133,7 @@ test('providers gratuitos ficam na ordem de failover e o ZeroGPU permanece por �
       'groq-1', 'openrouter-1', 'nvidia-1', 'zerogpu-1'
     ]);
   } finally {
+    resetRuntimeState();
     for (const name of names) {
       if (previous[name] === undefined) delete process.env[name];
       else process.env[name] = previous[name];
@@ -94,6 +175,7 @@ test('limita contexto e saída para proteger provedores gratuitos', async () => 
     assert.equal(calls[0].payload.messages.length, 14);
     assert.equal(calls[0].payload.messages[0].role, 'system');
   } finally {
+    resetRuntimeState();
     globalThis.fetch = originalFetch;
     if (previous.groq === undefined) delete process.env.GROQ_API_KEY;
     else process.env.GROQ_API_KEY = previous.groq;
@@ -117,6 +199,7 @@ test('aplica limite de requisições por endereço antes de chamar provedores', 
     assert.equal(second.body.retryable, true);
     assert.ok(Number(second.headers['Retry-After']) >= 1);
   } finally {
+    resetRuntimeState();
     if (previous === undefined) delete process.env.GUINHO_RATE_LIMIT_MAX;
     else process.env.GUINHO_RATE_LIMIT_MAX = previous;
   }

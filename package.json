@@ -5,9 +5,16 @@
   "type": "module",
   "scripts": {
     "start": "vercel dev",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "test": "npm run test:api && vitest run",
+    "test:api": "node --test api/chat.test.js",
+    "build": "node scripts/build-static.mjs",
+    "verify": "node scripts/verify-static.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
   }
 }

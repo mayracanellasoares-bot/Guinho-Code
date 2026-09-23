@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { tokenize } from '../src/lexer.ts';
-import { parse, ParseError } from '../src/parser.ts';
+import { tokenize } from './lexer.ts';
+import { parse, ParseError } from './parser.ts';
 
 describe('Parser - Auditoria de Mensagens de Erro e Interpolação', () => {
   it('formata erro com token encontrado (interpolação correta)', () => {

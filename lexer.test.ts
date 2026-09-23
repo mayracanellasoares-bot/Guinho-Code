@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tokenize, LexerError } from '../src/lexer.ts';
+import { tokenize, LexerError } from './lexer.ts';
 
 describe('Lexer', () => {
   it('tokeniza palavras-chave, números e identificadores', () => {

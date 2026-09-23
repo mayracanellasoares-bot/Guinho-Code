@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { BIT_LIBRARY } from '../src/library-data.ts';
-import { criarJogoBit } from '../src/index.ts';
+import { BIT_LIBRARY } from './library-data.ts';
+import { criarJogoBit } from './index.ts';
 
 describe('Biblioteca do Bit', () => {
   it('contém todos os comandos e categorias principais', () => {

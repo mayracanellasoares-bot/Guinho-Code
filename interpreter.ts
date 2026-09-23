@@ -1,6 +1,6 @@
-import { Expr, Stmt } from '../types.ts';
+import { Expr, Stmt } from './types.ts';
 import { Builtin } from './builtins.ts';
-import { Actor } from '../runtime/actor.ts';
+import { Actor } from './actor.ts';
 
 export class ReturnSignal {
   value: unknown;
