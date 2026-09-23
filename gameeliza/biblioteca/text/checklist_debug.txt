@@ -1,0 +1,6 @@
+Checklist determinístico:
+1. Reproduzir o erro em uma cena mínima.
+2. Registrar entrada, estado esperado e estado observado.
+3. Verificar delta time, ordem de atualização e limites.
+4. Desligar sistemas até isolar o componente.
+5. Corrigir uma hipótese por vez e repetir o teste.

@@ -1,0 +1,4 @@
+:root { color-scheme: dark; }
+body { margin: 0; background: #10121b; color: #e6edf7; font: 16px system-ui; }
+.game-shell { min-height: 100dvh; display: grid; place-items: center; padding: env(safe-area-inset-top) 12px; }
+canvas { max-width: 100%; height: auto; touch-action: none; image-rendering: pixelated; }

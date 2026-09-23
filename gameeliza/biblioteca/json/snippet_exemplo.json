@@ -1,0 +1,10 @@
+{
+  "title": "Padrão de debounce para UI",
+  "tags": [
+    "javascript",
+    "ui",
+    "input",
+    "performance"
+  ],
+  "code": "export function debounce(fn, delay = 250) {\n  let timer;\n  return (...args) => {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), delay);\n  };\n}\n"
+}
