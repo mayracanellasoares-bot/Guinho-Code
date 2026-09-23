@@ -366,6 +366,7 @@ class RouterHandler(BaseHTTPRequestHandler):
                 payload["model"] = model_name
                 self._proxy(payload, model_name, scores)
         except Exception as error:  # noqa: BLE001 - return a useful local API error
+            print(f"[guinho-router] model={model_name} failed: {error}", flush=True)
             self._send_json(
                 {
                     "ok": False,
@@ -391,6 +392,10 @@ class RouterHandler(BaseHTTPRequestHandler):
             response = connection.getresponse()
             if response.status >= 400:
                 detail = response.read(256 * 1024).decode("utf-8", "replace")
+                print(
+                    f"[guinho-router] llama-server HTTP {response.status}: {detail[:1000]}",
+                    flush=True,
+                )
                 self._send_json(
                     {"ok": False, "error": "llama_server_error", "status": response.status, "detail": detail},
                     502,
