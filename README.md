@@ -111,3 +111,8 @@ python -m http.server 3000 --bind 127.0.0.1
 ```
 
 Depois abra `http://127.0.0.1:3000/Guinho-Code-Qwen-Local.html`. A página já usa `127.0.0.1:8090`; não use a porta 8080 diretamente. A primeira pergunta após trocar de modelo demora mais porque o GGUF precisa ser carregado. O modo local é para o aparelho que executa o Termux; ele não torna esse modelo acessível publicamente no Vercel.
+
+
+## GameEliza MultiDev
+
+A versão determinística com memória de projetos e biblioteca local está em [`gameeliza/`](./gameeliza/). Ela inclui snippets originais para Godot, Python, JavaScript, HTML/CSS, C#, C++, SQL e depuração. Consulte [`gameeliza/README.md`](./gameeliza/README.md) para executar localmente.
