@@ -340,8 +340,11 @@ class RouterHandler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-cache")
             self.send_header("X-Guinho-Model", model_name)
             self.send_header("X-Guinho-Scores", json.dumps(scores, separators=(",", ":")))
-            # Do not forward Transfer-Encoding/Connection. BaseHTTPRequestHandler
-            # closes the HTTP/1.1 response after the upstream stream ends.
+            # SSE has no Content-Length; close this downstream response so the
+            # browser can observe the end of the stream without hanging.
+            self.send_header("Connection", "close")
+            self.close_connection = True
+            # Do not forward upstream Transfer-Encoding/Connection headers.
             content_length = response.getheader("Content-Length")
             if content_length and "text/event-stream" not in content_type:
                 self.send_header("Content-Length", content_length)
