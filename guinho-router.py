@@ -178,6 +178,8 @@ def start_backend(model_name: str) -> None:
         str(model_path),
         "-c",
         CONTEXT_SIZE,
+        "-np",
+        "1",
         "-ngl",
         GPU_LAYERS,
         "--host",
