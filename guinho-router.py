@@ -41,7 +41,10 @@ LLAMA_BIN = Path(
 MODEL_DIR = Path(
     os.environ.get("GUINHO_MODEL_DIR", str(Path.home() / "storage" / "downloads" / "I.As"))
 ).expanduser()
-CONTEXT_SIZE = os.environ.get("GUINHO_CONTEXT", "1024")
+CONTEXT_SIZE = os.environ.get("GUINHO_CONTEXT", "4096")
+MAX_CONTEXT_CHARS = int(
+    os.environ.get("GUINHO_MAX_CONTEXT_CHARS", str(int(CONTEXT_SIZE) * 3))
+)
 GPU_LAYERS = os.environ.get("GUINHO_GPU_LAYERS", "99")
 START_TIMEOUT = float(os.environ.get("GUINHO_START_TIMEOUT", "120"))
 
@@ -91,6 +94,55 @@ def _latest_user_text(messages: Any) -> str:
         if isinstance(item, dict) and item.get("role") == "user":
             return _text_from_content(item.get("content"))
     return ""
+
+
+def compact_messages(messages: Any) -> list[dict[str, str]]:
+    """Keep the system prompt and newest turns within the model context.
+
+    llama-server rejects requests whose prompt is larger than ``-c``. The
+    browser keeps a long system prompt plus conversation history, so trimming
+    here is safer than returning a context-size error to the user.
+    """
+
+    if not isinstance(messages, list):
+        return []
+    normalized: list[dict[str, str]] = []
+    for item in messages:
+        if not isinstance(item, dict) or item.get("role") not in {"system", "user", "assistant"}:
+            continue
+        content = _text_from_content(item.get("content")).strip()
+        if content:
+            normalized.append({"role": item["role"], "content": content})
+    if not normalized:
+        return []
+
+    budget = max(6000, MAX_CONTEXT_CHARS)
+    system = next((item for item in normalized if item["role"] == "system"), None)
+    turns = [item for item in normalized if item is not system]
+    result_system: dict[str, str] | None = None
+    remaining = budget
+    if system is not None:
+        system_limit = min(len(system["content"]), max(2000, budget // 2))
+        result_system = {"role": "system", "content": system["content"][:system_limit]}
+        remaining -= len(result_system["content"])
+
+    selected: list[dict[str, str]] = []
+    for item in reversed(turns):
+        if remaining <= 0:
+            break
+        content = item["content"]
+        take = min(len(content), remaining)
+        if take <= 0:
+            break
+        selected.append(
+            {
+                "role": item["role"],
+                "content": content[:take] + ("\n[contexto anterior truncado]" if take < len(content) else ""),
+            }
+        )
+        remaining -= take
+    selected.reverse()
+    return ([result_system] if result_system else []) + selected
 
 
 def choose_model(messages: Any) -> tuple[str, dict[str, int]]:
@@ -292,7 +344,7 @@ class RouterHandler(BaseHTTPRequestHandler):
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._send_json({"ok": False, "error": "invalid_json"}, 400)
             return None
-        if not isinstance(value, dict) or not isinstance(value.get("messages"), list):
+        if not isinstance(value, dict) or not isinstance(value.get("messages"), list) or not value["messages"]:
             self._send_json({"ok": False, "error": "messages_must_be_an_array"}, 400)
             return None
         return value
@@ -305,6 +357,7 @@ class RouterHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         model_name, scores = choose_model(payload["messages"])
+        payload["messages"] = compact_messages(payload["messages"])
         try:
             # Serializes switching and inference so a second request cannot kill
             # the model while the first request is still receiving its stream.
@@ -375,6 +428,11 @@ def shutdown(*_: Any) -> None:
     stop_backend()
 
 
+class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 atexit.register(stop_backend)
 signal.signal(signal.SIGTERM, shutdown)
 signal.signal(signal.SIGINT, shutdown)
@@ -385,7 +443,7 @@ if __name__ == "__main__":
     print(f"llama-server: {LLAMA_BIN}", flush=True)
     print(f"modelos: {MODEL_DIR}", flush=True)
     print("O primeiro pedido iniciará o modelo adequado.", flush=True)
-    server = ThreadingHTTPServer((ROUTER_HOST, ROUTER_PORT), RouterHandler)
+    server = ReusableThreadingHTTPServer((ROUTER_HOST, ROUTER_PORT), RouterHandler)
     try:
         server.serve_forever()
     finally:
