@@ -356,6 +356,13 @@ async function consumeSseStream({ response, controller, onFrame, onFirstContent 
     if (!sawContent) framesWithoutContent += 1;
   };
 
+  // Do not forward provider-only role/analysis keepalives. They add latency and
+  // can expose internal channel metadata without contributing user-visible text.
+  const emitUsefulFrame = frame => {
+    const stats = inspectSseFrame(frame);
+    if (stats.hasContent || stats.done || stats.hasError) onFrame(frame);
+  };
+
   try {
     while (true) {
       const firstContentRemaining = FIRST_CONTENT_TIMEOUT_MS - (Date.now() - streamStartedAt);
@@ -372,7 +379,7 @@ async function consumeSseStream({ response, controller, onFrame, onFirstContent 
       upstreamBytes += result.value.byteLength;
       remainder = flushSseFrames(
         remainder + decoder.decode(result.value, { stream: true }),
-        onFrame,
+        emitUsefulFrame,
         inspectFrame
       );
       if (!sawContent && (
@@ -385,12 +392,15 @@ async function consumeSseStream({ response, controller, onFrame, onFirstContent 
 
     remainder = flushSseFrames(
       remainder + decoder.decode(),
-      onFrame,
+      emitUsefulFrame,
       inspectFrame
     );
     if (remainder.trim()) {
-      inspectFrame(inspectSseFrame(remainder));
-      onFrame(sanitizeSseFrame(remainder) + '\n\n');
+      const stats = inspectSseFrame(remainder);
+      inspectFrame(stats);
+      if (stats.hasContent || stats.done || stats.hasError) {
+        onFrame(sanitizeSseFrame(remainder) + '\n\n');
+      }
     }
 
     if (!upstreamBytes) throw new Error('UPSTREAM_EMPTY_STREAM');

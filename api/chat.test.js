@@ -121,6 +121,36 @@ test('interrupção depois do primeiro conteúdo mantém SSE válido para o clie
   }
 });
 
+test('não encaminha frames de role ou análise sem texto visível', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.OPENROUTER_API_KEY;
+  const originalOrder = process.env.GUINHO_PROVIDER_ORDER;
+  process.env.OPENROUTER_API_KEY = 'test-key';
+  process.env.GUINHO_PROVIDER_ORDER = 'openrouter';
+  globalThis.fetch = async () => new Response(
+    'data: {"choices":[{"delta":{"role":"assistant"}}]}\n\n' +
+    'data: {"choices":[{"delta":{"channel":"analysis"}}]}\n\n' +
+    'data: {"choices":[{"delta":{"content":"visível"}}]}\n\n' +
+    'data: [DONE]\n\n',
+    { status: 200, headers: { 'Content-Type': 'text/event-stream' } }
+  );
+  const response = new ResponseRecorder();
+  try {
+    await handler({ method: 'POST', body: { messages: [{ role: 'user', content: 'ping' }] } }, response);
+    const frames = response.chunks.join('').split('\n\n').filter(Boolean);
+    assert.equal(frames.length, 2);
+    assert.equal(JSON.parse(frames[0].slice(6)).choices[0].delta.content, 'visível');
+    assert.equal(frames[1], 'data: [DONE]');
+  } finally {
+    resetRuntimeState();
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = originalKey;
+    if (originalOrder === undefined) delete process.env.GUINHO_PROVIDER_ORDER;
+    else process.env.GUINHO_PROVIDER_ORDER = originalOrder;
+  }
+});
+
 test('providers gratuitos ficam na ordem de failover e o ZeroGPU permanece por último', () => {
   const names = ['GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'GUINHO_ZEROGPU_URL'];
   const previous = Object.fromEntries(names.map(name => [name, process.env[name]]));
