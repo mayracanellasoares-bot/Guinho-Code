@@ -250,6 +250,18 @@ class RouterHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
+        if self.path == "/":
+            self._send_json(
+                {
+                    "ok": True,
+                    "service": "Guinho local router",
+                    "router": f"http://{ROUTER_HOST}:{ROUTER_PORT}",
+                    "health": "/health",
+                    "chat": "/v1/chat/completions",
+                    "activeModel": ACTIVE_MODEL,
+                }
+            )
+            return
         if self.path != "/health":
             self._send_json({"ok": False, "error": "not_found"}, 404)
             return
