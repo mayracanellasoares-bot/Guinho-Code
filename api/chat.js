@@ -11,8 +11,14 @@ const FIRST_CONTENT_TIMEOUT_MS = 9000;
 const MAX_FRAMES_WITHOUT_CONTENT = 40;
 const RATE_LIMIT_WINDOW_MS = 60000;
 const DEFAULT_RATE_LIMIT_MAX = 20;
+const STREAM_FAILURE_COOLDOWN_MS = 300000;
 const providerCooldownUntil = new Map();
 const rateLimitState = new Map();
+
+export function resetRuntimeState() {
+  providerCooldownUntil.clear();
+  rateLimitState.clear();
+}
 
 const DEFAULT_PROVIDER_ORDER = ['groq', 'openrouter', 'nvidia', 'deepseek', 'gemini'];
 
@@ -185,8 +191,16 @@ function normalizeMessages(value) {
   return system ? [system, ...conversation] : conversation;
 }
 
-function markFailure(provider, status) {
-  const duration = status === 401 || status === 402 ? 300000 : status === 429 ? 60000 : status >= 500 || !status ? 30000 : 120000;
+function markFailure(provider, status, reason = '') {
+  const duration = reason === 'stream_error'
+    ? STREAM_FAILURE_COOLDOWN_MS
+    : status === 401 || status === 402
+      ? 300000
+      : status === 429
+        ? 60000
+        : status >= 500 || !status
+          ? 30000
+          : 120000;
   providerCooldownUntil.set(provider.id, Date.now() + duration);
 }
 
@@ -320,6 +334,85 @@ function flushSseFrames(buffer, writeFrame, inspectFrame = () => {}) {
   return buffer;
 }
 
+async function consumeSseStream({ response, controller, onFrame, onFirstContent }) {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('UPSTREAM_NO_STREAM');
+
+  const decoder = new TextDecoder();
+  let upstreamBytes = 0;
+  let remainder = '';
+  let sawContent = false;
+  let framesWithoutContent = 0;
+  const streamStartedAt = Date.now();
+
+  const inspectFrame = stats => {
+    if (!stats.hasData || stats.done || stats.hasError) return;
+    if (stats.hasContent) {
+      if (!sawContent) onFirstContent?.();
+      sawContent = true;
+      framesWithoutContent = 0;
+      return;
+    }
+    if (!sawContent) framesWithoutContent += 1;
+  };
+
+  try {
+    while (true) {
+      const firstContentRemaining = FIRST_CONTENT_TIMEOUT_MS - (Date.now() - streamStartedAt);
+      if (!sawContent && firstContentRemaining <= 0) throw new Error('UPSTREAM_FIRST_CONTENT_TIMEOUT');
+
+      const result = await readWithTimeout(
+        reader,
+        controller,
+        sawContent ? STREAM_IDLE_TIMEOUT_MS : Math.min(STREAM_IDLE_TIMEOUT_MS, firstContentRemaining)
+      );
+      if (result.done) break;
+      if (!result.value || !result.value.byteLength) continue;
+
+      upstreamBytes += result.value.byteLength;
+      remainder = flushSseFrames(
+        remainder + decoder.decode(result.value, { stream: true }),
+        onFrame,
+        inspectFrame
+      );
+      if (!sawContent && (
+        Date.now() - streamStartedAt > FIRST_CONTENT_TIMEOUT_MS ||
+        framesWithoutContent > MAX_FRAMES_WITHOUT_CONTENT
+      )) {
+        throw new Error('UPSTREAM_FIRST_CONTENT_TIMEOUT');
+      }
+    }
+
+    remainder = flushSseFrames(
+      remainder + decoder.decode(),
+      onFrame,
+      inspectFrame
+    );
+    if (remainder.trim()) {
+      inspectFrame(inspectSseFrame(remainder));
+      onFrame(sanitizeSseFrame(remainder) + '\n\n');
+    }
+
+    if (!upstreamBytes) throw new Error('UPSTREAM_EMPTY_STREAM');
+    if (!sawContent) throw new Error('UPSTREAM_NO_CONTENT');
+    return { upstreamBytes, sawContent };
+  } catch (error) {
+    const normalized = error instanceof Error ? error : new Error(String(error));
+    normalized.sawContent = sawContent;
+    normalized.upstreamBytes = upstreamBytes;
+    try { await reader.cancel(); } catch {}
+    throw normalized;
+  }
+}
+
+function streamFailureReason(error) {
+  const reason = error?.message || '';
+  if (reason === 'UPSTREAM_FIRST_CONTENT_TIMEOUT') return 'first_content_timeout';
+  if (reason === 'UPSTREAM_EMPTY_STREAM' || reason === 'UPSTREAM_NO_CONTENT') return 'empty_stream';
+  if (reason === 'UPSTREAM_IDLE_TIMEOUT') return 'idle_timeout';
+  return 'stream_error';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -382,125 +475,112 @@ export default async function handler(req, res) {
     max_tokens: maxTokens
   };
   const failures = [];
-  let selected = null;
-  let upstream = null;
-  let upstreamController = null;
+  let responseStarted = false;
+  let activeProvider = null;
+  let closeUpstream = null;
+  let pendingFrames = [];
+
+  const startResponse = (provider, controller) => {
+    if (responseStarted) return;
+    responseStarted = true;
+    activeProvider = provider;
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'X-Guinho-Provider': provider.id,
+      'Access-Control-Expose-Headers': 'X-Guinho-Provider'
+    });
+    closeUpstream = () => {
+      if (!res.writableEnded && !res.destroyed) controller.abort();
+    };
+    res.on('close', closeUpstream);
+    for (const frame of pendingFrames) {
+      if (!res.destroyed) res.write(frame);
+    }
+    pendingFrames = [];
+  };
+
+  const emitFrame = frame => {
+    if (!responseStarted) {
+      pendingFrames.push(frame);
+      return;
+    }
+    if (!res.destroyed) res.write(frame);
+  };
 
   for (const provider of candidates) {
     const payload = Object.assign({}, payloadBase, { model: provider.model });
     if (provider.name === 'OpenRouter') payload.reasoning = { exclude: true };
+    let opened = null;
     try {
-      const opened = await openProvider(provider, payload);
-      if (opened.response.ok && opened.response.body) {
-        selected = provider;
-        upstream = opened.response;
-        upstreamController = opened.controller;
-        break;
+      opened = await openProvider(provider, payload);
+      if (!opened.response.ok || !opened.response.body) {
+        failures.push({ provider: provider.id, status: opened.response.status, reason: 'http_error' });
+        markFailure(provider, opened.response.status);
+        try { await opened.response.body?.cancel(); } catch {}
+        console.warn('[guinho/chat] provider_failed', { provider: provider.id, status: opened.response.status });
+        continue;
       }
-      failures.push({ provider: provider.id, status: opened.response.status, reason: 'http_error' });
-      markFailure(provider, opened.response.status);
-      try { await opened.response.body?.cancel(); } catch {}
-      console.warn('[guinho/chat] provider_failed', { provider: provider.id, status: opened.response.status });
+
+      activeProvider = provider;
+      pendingFrames = [];
+      const result = await consumeSseStream({
+        response: opened.response,
+        controller: opened.controller,
+        onFirstContent: () => startResponse(provider, opened.controller),
+        onFrame: emitFrame
+      });
+
+      console.info('[guinho/chat] provider_selected', {
+        provider: provider.id,
+        candidates: candidates.length,
+        failedBeforeSelection: failures.length,
+        messageCount: messages.length,
+        maxTokens,
+        upstreamBytes: result.upstreamBytes
+      });
+      if (!res.writableEnded && !res.destroyed) res.end();
+      if (closeUpstream) res.off('close', closeUpstream);
+      return;
     } catch (error) {
-      failures.push({ provider: provider.id, status: 504, reason: error.name === 'AbortError' ? 'connect_timeout' : 'network_error' });
-      markFailure(provider);
-      console.warn('[guinho/chat] provider_failed', { provider: provider.id, reason: error.name || 'network_error' });
+      const reason = opened?.response?.ok ? streamFailureReason(error) : (error.name === 'AbortError' ? 'connect_timeout' : 'network_error');
+      const status = 504;
+      failures.push({ provider: provider.id, status, reason });
+      markFailure(provider, status, opened?.response?.ok ? 'stream_error' : reason);
+      console.warn('[guinho/chat] provider_failed', { provider: provider.id, reason });
+
+      if (responseStarted && activeProvider?.id === provider.id) {
+        if (!res.writableEnded && !res.destroyed) {
+          try {
+            res.write('data: ' + JSON.stringify({
+              error: {
+                code: 'UPSTREAM_STREAM_FAILED',
+                message: 'The selected provider interrupted the stream',
+                retryable: true
+              },
+              provider: provider.id
+            }) + '\n\n');
+            res.write('data: [DONE]\n\n');
+          } catch {}
+          res.end();
+        }
+        if (closeUpstream) res.off('close', closeUpstream);
+        return;
+      }
+
+      pendingFrames = [];
+      try { await opened?.response?.body?.cancel(); } catch {}
     }
   }
 
-  if (!selected || !upstream || !upstreamController) {
+  if (!responseStarted) {
     res.status(503).json({
       error: 'All AI providers are temporarily unavailable',
       retryable: true,
       providers: publicFailures(failures)
     });
     return;
-  }
-
-  console.info('[guinho/chat] provider_selected', {
-    provider: selected.id,
-    candidates: candidates.length,
-    failedBeforeSelection: failures.length,
-    messageCount: messages.length,
-    maxTokens
-  });
-
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream; charset=utf-8',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
-    'X-Guinho-Provider': selected.id,
-    'Access-Control-Expose-Headers': 'X-Guinho-Provider'
-  });
-
-  const closeUpstream = () => {
-    if (!res.writableEnded && !res.destroyed) upstreamController.abort();
-  };
-  res.on('close', closeUpstream);
-
-  try {
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    let upstreamBytes = 0;
-    let remainder = '';
-    let sawContent = false;
-    let framesWithoutContent = 0;
-    const streamStartedAt = Date.now();
-    const inspectFrame = stats => {
-      if (!stats.hasData || stats.done || stats.hasError) return;
-      if (stats.hasContent) {
-        sawContent = true;
-        framesWithoutContent = 0;
-        return;
-      }
-      if (!sawContent) framesWithoutContent += 1;
-    };
-    while (true) {
-      const firstContentRemaining = FIRST_CONTENT_TIMEOUT_MS - (Date.now() - streamStartedAt);
-      if (!sawContent && firstContentRemaining <= 0) throw new Error('UPSTREAM_FIRST_CONTENT_TIMEOUT');
-      const result = await readWithTimeout(reader, upstreamController,
-        sawContent ? STREAM_IDLE_TIMEOUT_MS : Math.min(STREAM_IDLE_TIMEOUT_MS, firstContentRemaining));
-      if (result.done) break;
-      if (result.value && result.value.byteLength) {
-        upstreamBytes += result.value.byteLength;
-        remainder = flushSseFrames(remainder + decoder.decode(result.value, { stream: true }), frame => {
-          if (!res.destroyed) res.write(frame);
-        }, inspectFrame);
-        if (!sawContent && (Date.now() - streamStartedAt > FIRST_CONTENT_TIMEOUT_MS || framesWithoutContent > MAX_FRAMES_WITHOUT_CONTENT)) {
-          throw new Error('UPSTREAM_FIRST_CONTENT_TIMEOUT');
-        }
-      }
-    }
-    remainder = flushSseFrames(remainder + decoder.decode(), frame => {
-      if (!res.destroyed) res.write(frame);
-    }, inspectFrame);
-    if (remainder.trim() && !res.destroyed) {
-      res.write(sanitizeSseFrame(remainder) + '\n\n');
-    }
-    if (!upstreamBytes) throw new Error('UPSTREAM_EMPTY_STREAM');
-    if (!res.writableEnded) res.end();
-  } catch (error) {
-    markFailure(selected);
-    console.error('[guinho/chat] stream_failed', {
-      provider: selected.id,
-      reason: error.name || error.message || 'stream_error'
-    });
-    if (!res.writableEnded && !res.destroyed) {
-      try {
-        res.write('data: ' + JSON.stringify({
-          error: {
-            code: 'UPSTREAM_STREAM_FAILED',
-            message: 'The selected provider interrupted the stream',
-            retryable: true
-          },
-          provider: selected.id
-        }) + '\n\n');
-        res.write('data: [DONE]\n\n');
-      } catch {}
-      res.end();
-    }
-  } finally {
-    res.off('close', closeUpstream);
   }
 }

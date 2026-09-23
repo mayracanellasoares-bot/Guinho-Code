@@ -1,9 +1,9 @@
-import { ProgramAST } from '../types.ts';
+import { ProgramAST } from './types.ts';
 import { Actor, InputState } from './actor.ts';
 import { checkAABB } from './collision.ts';
-import { createBuiltins, BuiltinContext } from '../interp/builtins.ts';
-import { Interpreter } from '../interp/interpreter.ts';
-import { resolveColor } from '../colors.ts';
+import { createBuiltins, BuiltinContext } from './builtins.ts';
+import { Interpreter } from './interpreter.ts';
+import { resolveColor } from './colors.ts';
 
 export class Game {
   ast: ProgramAST;

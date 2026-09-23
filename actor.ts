@@ -1,5 +1,5 @@
-import { DrawShape, ControlledBy, BounceConfig } from '../types.ts';
-import { resolveColor } from '../colors.ts';
+import { DrawShape, ControlledBy, BounceConfig } from './types.ts';
+import { resolveColor } from './colors.ts';
 
 export interface InputState {
   up: boolean;

@@ -20,7 +20,7 @@ GUINHO_RATE_LIMIT_MAX=20
 DATABASE_URL=postgresql://usuario:senha@host/database?sslmode=require
 ```
 
-O endpoint `/api/chat` transmite a resposta por SSE, exclui o raciocínio interno do provedor e tenta reconectar quando a geração é interrompida.
+O endpoint `/api/chat` transmite a resposta por SSE, exclui o raciocínio interno do provedor e faz failover no servidor antes de enviar os headers quando um stream termina sem conteúdo. Se a interrupção ocorrer depois do primeiro token, o cliente recebe um erro SSE explícito e tenta outra fonte.
 
 O modo sem custo tenta, por padrão, Groq, OpenRouter, NVIDIA, DeepSeek e Gemini na ordem configurada. O ZeroGPU é mantido como último recurso. A API limita o primeiro conteúdo a 9 segundos, a inatividade do stream a 20 segundos, o contexto a 14 mensagens e a resposta a 8.192 tokens para evitar que uma fonte gratuita lenta congele a interface.
 
@@ -55,6 +55,7 @@ No Android, abra o site no Chrome e use **Instalar aplicativo** quando o navegad
 ```bash
 npm i -g vercel
 vercel dev
+npm test
 ```
 
 O frontend está em `index.html`; as funções serverless ficam em `api/`.

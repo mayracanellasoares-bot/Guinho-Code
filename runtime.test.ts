@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { tokenize } from '../src/lexer.ts';
-import { parse } from '../src/parser.ts';
-import { Game } from '../src/runtime/game.ts';
-import { checkAABB } from '../src/runtime/collision.ts';
+import { tokenize } from './lexer.ts';
+import { parse } from './parser.ts';
+import { Game } from './game.ts';
+import { checkAABB } from './collision.ts';
 
 describe('Runtime - Atores, Quique e Pontuação de Pong', () => {
   it('permite que a bola saia da tela na horizontal para pontuar quando quique é vertical', () => {

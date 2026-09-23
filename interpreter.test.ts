@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { tokenize } from '../src/lexer.ts';
-import { parse } from '../src/parser.ts';
-import { createBuiltins } from '../src/interp/builtins.ts';
-import { Interpreter } from '../src/interp/interpreter.ts';
+import { tokenize } from './lexer.ts';
+import { parse } from './parser.ts';
+import { createBuiltins } from './builtins.ts';
+import { Interpreter } from './interpreter.ts';
 
 function runProgram(code: string): { output: string[]; env: any } {
   const tokens = tokenize(code);

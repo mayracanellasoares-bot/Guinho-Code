@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { tokenize } from '../src/lexer.ts';
-import { parse } from '../src/parser.ts';
-import { Game } from '../src/runtime/game.ts';
+import { tokenize } from './lexer.ts';
+import { parse } from './parser.ts';
+import { Game } from './game.ts';
 
 describe('Exemplos da Linguagem Bit', () => {
   it('faz parse e executa steps de examples/pong.bit', () => {
-    const filePath = path.resolve(process.cwd(), 'examples/pong.bit');
+    const filePath = path.resolve(process.cwd(), 'pong.bit');
     const content = fs.readFileSync(filePath, 'utf-8');
 
     const tokens = tokenize(content);
@@ -28,7 +28,7 @@ describe('Exemplos da Linguagem Bit', () => {
   });
 
   it('faz parse e executa steps de examples/nave.bit', () => {
-    const filePath = path.resolve(process.cwd(), 'examples/nave.bit');
+    const filePath = path.resolve(process.cwd(), 'nave.bit');
     const content = fs.readFileSync(filePath, 'utf-8');
 
     const tokens = tokenize(content);
@@ -42,7 +42,7 @@ describe('Exemplos da Linguagem Bit', () => {
   });
 
   it('faz parse e executa steps de examples/breakout.bit', () => {
-    const filePath = path.resolve(process.cwd(), 'examples/breakout.bit');
+    const filePath = path.resolve(process.cwd(), 'breakout.bit');
     const content = fs.readFileSync(filePath, 'utf-8');
 
     const tokens = tokenize(content);
@@ -56,7 +56,7 @@ describe('Exemplos da Linguagem Bit', () => {
   });
 
   it('faz parse e executa steps de examples/tetris.bit', () => {
-    const filePath = path.resolve(process.cwd(), 'examples/tetris.bit');
+    const filePath = path.resolve(process.cwd(), 'tetris.bit');
     const content = fs.readFileSync(filePath, 'utf-8');
 
     const tokens = tokenize(content);

@@ -6,15 +6,15 @@ export * from './types.ts';
 export * from './colors.ts';
 export * from './lexer.ts';
 export * from './parser.ts';
-export * from './interp/builtins.ts';
-export * from './interp/interpreter.ts';
-export * from './runtime/actor.ts';
-export * from './runtime/game.ts';
-export * from './runtime/collision.ts';
+export * from './builtins.ts';
+export * from './interpreter.ts';
+export * from './actor.ts';
+export * from './game.ts';
+export * from './collision.ts';
 
 import { tokenize } from './lexer.ts';
 import { parse } from './parser.ts';
-import { Game } from './runtime/game.ts';
+import { Game } from './game.ts';
 import type { ProgramAST } from './types.ts';
 
 /**

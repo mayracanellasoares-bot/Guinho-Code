@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createBuiltins } from '../src/interp/builtins.ts';
+import { createBuiltins } from './builtins.ts';
 
 describe('Built-ins - Tipos de retorno e Nomes acentuados', () => {
   it('mapa aceita funções com retornos de tipos diferentes (number, boolean)', () => {

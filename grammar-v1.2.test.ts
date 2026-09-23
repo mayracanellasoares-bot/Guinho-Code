@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { tokenize } from '../src/lexer.ts';
-import { parse } from '../src/parser.ts';
+import { tokenize } from './lexer.ts';
+import { parse } from './parser.ts';
 
 describe('BIT 1.2 - gramática', () => {
   it('aceita título do jogo e operadores lógicos simbólicos', () => {
