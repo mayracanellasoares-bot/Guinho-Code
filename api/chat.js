@@ -1,3 +1,5 @@
+import { openZeroGpu, zeroGpuBaseUrl } from './zerogpu.js';
+
 const MAX_OUTPUT_TOKENS = 32000;
 const CONNECT_TIMEOUT_MS = 10000;
 const STREAM_IDLE_TIMEOUT_MS = 90000;
@@ -81,6 +83,12 @@ function getProviders() {
     defaultModel: 'gemini-2.0-flash',
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
   });
+  const zeroGpuUrl = zeroGpuBaseUrl(process.env.GUINHO_ZEROGPU_URL);
+  if (zeroGpuUrl) providers.push({
+    id: 'zerogpu-1', name: 'Hugging Face ZeroGPU',
+    endpoint: zeroGpuUrl, key: process.env.GUINHO_ZEROGPU_TOKEN || '',
+    model: 'Qwen/Qwen2.5-Coder-1.5B-Instruct', type: 'zerogpu'
+  });
   return providers;
 }
 
@@ -121,6 +129,7 @@ function makeCandidates(providers, avoid) {
 }
 
 async function openProvider(provider, payload) {
+  if (provider.type === 'zerogpu') return openZeroGpu(provider, payload);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CONNECT_TIMEOUT_MS);
   try {
