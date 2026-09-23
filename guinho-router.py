@@ -431,6 +431,7 @@ class RouterHandler(BaseHTTPRequestHandler):
 
 def shutdown(*_: Any) -> None:
     stop_backend()
+    raise SystemExit(0)
 
 
 class ReusableThreadingHTTPServer(ThreadingHTTPServer):
@@ -453,5 +454,5 @@ if __name__ == "__main__":
         server.serve_forever()
     finally:
         server.server_close()
-        shutdown()
+        stop_backend()
 
