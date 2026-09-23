@@ -360,7 +360,7 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
   const url=ONLINE_API;
   const avoidProviders=new Set();
   let lastError=null;
-  requestTimer=setTimeout(()=>controller.abort(),45000);
+  requestTimer=setTimeout(()=>controller.abort(),180000);
   const requestedTokens=/\b(c[oó]digo|arquivo|implemente|desenvolva|programa|jogo|script|api|site|pwa)\b/i.test(text)?4096:2048;
   for(let attempt=0;attempt<3;attempt++){
    answer='';
