@@ -1,3 +1,5 @@
+import { zeroGpuBaseUrl } from './zerogpu.js';
+
 function family(keys, id, name, modelEnv, fallbackModel) {
   const values = [...new Set(keys.flatMap(key => [
     process.env[key],
@@ -19,6 +21,8 @@ export default function handler(req, res) {
     ...family(['DEEPSEEK_API_KEY'], 'deepseek', 'DeepSeek', 'DEEPSEEK_MODEL', 'deepseek-chat'),
     ...family(['GEMINI_API_KEY', 'GOOGLE_API_KEY'], 'gemini', 'Gemini', 'GEMINI_MODEL', 'gemini-2.0-flash')
   ];
+  const zeroGpuConfigured = Boolean(zeroGpuBaseUrl(process.env.GUINHO_ZEROGPU_URL));
+  if (zeroGpuConfigured) providers.push({ id: 'zerogpu-1', name: 'Hugging Face ZeroGPU', model: 'Qwen/Qwen2.5-Coder-1.5B-Instruct' });
   const primary = providers[0];
   const ok = providers.length > 0;
   res.status(ok ? 200 : 500).json({
@@ -26,6 +30,7 @@ export default function handler(req, res) {
     provider: primary?.name || 'none',
     model: primary?.model || null,
     providers: providers.map(({ id, name, model }) => ({ id, name, model })),
-    failoverReady: providers.length > 1
+    failoverReady: providers.length > 1,
+    zeroGpuConfigured
   });
 }
