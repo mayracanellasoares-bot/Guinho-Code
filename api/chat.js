@@ -1,11 +1,20 @@
 import { openZeroGpu, zeroGpuBaseUrl } from './zerogpu.js';
 
-const MAX_OUTPUT_TOKENS = 32000;
-const CONNECT_TIMEOUT_MS = 10000;
-const STREAM_IDLE_TIMEOUT_MS = 90000;
-const FIRST_CONTENT_TIMEOUT_MS = 12000;
-const MAX_FRAMES_WITHOUT_CONTENT = 80;
+const MAX_OUTPUT_TOKENS = 8192;
+const DEFAULT_OUTPUT_TOKENS = 2048;
+const MAX_MESSAGES = 14;
+const MAX_MESSAGE_CHARS = 24000;
+const MAX_SERIALIZED_MESSAGES_CHARS = 450000;
+const CONNECT_TIMEOUT_MS = 6500;
+const STREAM_IDLE_TIMEOUT_MS = 20000;
+const FIRST_CONTENT_TIMEOUT_MS = 9000;
+const MAX_FRAMES_WITHOUT_CONTENT = 40;
+const RATE_LIMIT_WINDOW_MS = 60000;
+const DEFAULT_RATE_LIMIT_MAX = 20;
 const providerCooldownUntil = new Map();
+const rateLimitState = new Map();
+
+const DEFAULT_PROVIDER_ORDER = ['groq', 'openrouter', 'nvidia', 'deepseek', 'gemini'];
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
@@ -37,7 +46,29 @@ function addFamily(providers, config) {
   });
 }
 
-function getProviders() {
+function providerOrder() {
+  const configured = String(process.env.GUINHO_PROVIDER_ORDER || '')
+    .split(',')
+    .map(value => value.trim().toLowerCase())
+    .filter(Boolean);
+  return unique([...configured, ...DEFAULT_PROVIDER_ORDER]);
+}
+
+function orderProviders(providers) {
+  const order = providerOrder();
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return [...providers].sort((left, right) => {
+    if (left.type === 'zerogpu' && right.type !== 'zerogpu') return 1;
+    if (right.type === 'zerogpu' && left.type !== 'zerogpu') return -1;
+    const leftFamily = left.id.split('-')[0];
+    const rightFamily = right.id.split('-')[0];
+    const leftRank = rank.has(leftFamily) ? rank.get(leftFamily) : order.length + 1;
+    const rightRank = rank.has(rightFamily) ? rank.get(rightFamily) : order.length + 1;
+    return leftRank - rightRank || left.id.localeCompare(right.id);
+  });
+}
+
+export function getProviders() {
   const providers = [];
   addFamily(providers, {
     id: 'openrouter',
@@ -89,7 +120,7 @@ function getProviders() {
     endpoint: zeroGpuUrl, key: process.env.GUINHO_ZEROGPU_TOKEN || '',
     model: 'Qwen/Qwen2.5-Coder-1.5B-Instruct', type: 'zerogpu'
   });
-  return providers;
+  return orderProviders(providers);
 }
 
 function getHeaders(provider) {
@@ -105,12 +136,53 @@ function boundedNumber(value, fallback, minimum, maximum) {
   return Math.min(Math.max(number, minimum), maximum);
 }
 
+function clientAddress(req) {
+  const forwarded = req.headers?.['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) return forwarded.split(',')[0].trim();
+  const real = req.headers?.['x-real-ip'];
+  if (typeof real === 'string' && real.trim()) return real.trim();
+  return 'unknown';
+}
+
+function takeRateLimit(req) {
+  const now = Date.now();
+  const max = Math.max(1, Math.floor(boundedNumber(
+    process.env.GUINHO_RATE_LIMIT_MAX,
+    DEFAULT_RATE_LIMIT_MAX,
+    1,
+    120
+  )));
+  const key = clientAddress(req);
+  let entry = rateLimitState.get(key);
+  if (!entry || now - entry.startedAt >= RATE_LIMIT_WINDOW_MS) {
+    entry = { startedAt: now, count: 0 };
+  }
+  const allowed = entry.count < max;
+  if (allowed) entry.count += 1;
+  rateLimitState.set(key, entry);
+
+  if (rateLimitState.size > 1000) {
+    for (const [address, value] of rateLimitState) {
+      if (now - value.startedAt >= RATE_LIMIT_WINDOW_MS) rateLimitState.delete(address);
+    }
+  }
+
+  return {
+    allowed,
+    limit: max,
+    remaining: Math.max(0, max - entry.count),
+    retryAfter: Math.max(1, Math.ceil((entry.startedAt + RATE_LIMIT_WINDOW_MS - now) / 1000))
+  };
+}
+
 function normalizeMessages(value) {
   if (!Array.isArray(value)) return [];
-  return value
+  const normalized = value
     .filter(message => message && ['system', 'user', 'assistant', 'tool'].includes(message.role) && typeof message.content === 'string')
-    .map(message => ({ role: message.role, content: message.content.slice(0, 300000) }))
-    .slice(-30);
+    .map(message => ({ role: message.role, content: message.content.slice(0, MAX_MESSAGE_CHARS) }));
+  const system = normalized.find(message => message.role === 'system');
+  const conversation = normalized.filter(message => message.role !== 'system').slice(-(MAX_MESSAGES - (system ? 1 : 0)));
+  return system ? [system, ...conversation] : conversation;
 }
 
 function markFailure(provider, status) {
@@ -255,7 +327,32 @@ export default async function handler(req, res) {
     return;
   }
 
-  const body = req.body || {};
+  const limit = takeRateLimit(req);
+  res.setHeader('X-RateLimit-Limit', String(limit.limit));
+  res.setHeader('X-RateLimit-Remaining', String(limit.remaining));
+  if (!limit.allowed) {
+    res.setHeader('Retry-After', String(limit.retryAfter));
+    res.status(429).json({
+      error: 'Muitas solicitações. Aguarde alguns segundos e tente novamente.',
+      retryable: true,
+      retryAfter: limit.retryAfter
+    });
+    return;
+  }
+
+  let body = req.body || {};
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      res.status(400).json({ error: 'JSON inválido' });
+      return;
+    }
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    res.status(400).json({ error: 'Corpo da requisição inválido' });
+    return;
+  }
   const messages = normalizeMessages(body.messages);
   if (!messages.length) {
     res.status(400).json({ error: 'At least one valid message is required' });
@@ -263,7 +360,7 @@ export default async function handler(req, res) {
   }
 
   const serializedMessages = JSON.stringify(messages);
-  if (serializedMessages.length > 1200000) {
+  if (serializedMessages.length > MAX_SERIALIZED_MESSAGES_CHARS) {
     res.status(413).json({ error: 'Conversation payload is too large' });
     return;
   }
@@ -276,7 +373,7 @@ export default async function handler(req, res) {
 
   const avoid = new Set(Array.isArray(body.avoidProviders) ? body.avoidProviders.filter(value => typeof value === 'string').slice(0, 10) : []);
   const candidates = makeCandidates(providers, avoid);
-  const maxTokens = boundedNumber(body.max_tokens, 16000, 256, MAX_OUTPUT_TOKENS);
+  const maxTokens = boundedNumber(body.max_tokens, DEFAULT_OUTPUT_TOKENS, 256, MAX_OUTPUT_TOKENS);
   const payloadBase = {
     messages,
     stream: true,

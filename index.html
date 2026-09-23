@@ -118,7 +118,7 @@ const connect=document.querySelector('#connect'), continueCode=document.querySel
 const historyToggle=document.querySelector('#history-toggle'), exportHistory=document.querySelector('#export-history'), deleteHistory=document.querySelector('#delete-history'), historyPanel=document.querySelector('#history-panel'), historyStatus=document.querySelector('#history-status'), conversationList=document.querySelector('#conversation-list');
 const fileInput=document.querySelector('#attachments'), fileList=document.querySelector('#file-list'), attachmentStatus=document.querySelector('#attachment-status');
 const tabButtons=[...document.querySelectorAll('[data-panel]')], tabPanels=[...document.querySelectorAll('.tab-panel')];
-const MAX_FILE_BYTES=2*1024*1024, MAX_TOTAL_BYTES=3*1024*1024, MAX_LOCAL_CONVERSATIONS=30, MAX_SAVED_MESSAGES=80;
+const MAX_FILE_BYTES=2*1024*1024, MAX_TOTAL_BYTES=3*1024*1024, MAX_LOCAL_CONVERSATIONS=30, MAX_SAVED_MESSAGES=80, MAX_CONTEXT_MESSAGES=13;
 const CLIENT_KEY='guinho_client_id_v1', ACTIVE_CONVERSATION_KEY='guinho_active_conversation_v1', LEGACY_HISTORY_KEY='guinho_history', LOCAL_FALLBACK_KEY='guinho_conversations_v1';
 const system={role:'system',content:`Você é o Guinho-Code, um engenheiro de software sênior, analista de requisitos e arquiteto de soluções. Sua prioridade é compreender corretamente o objetivo do usuário antes de responder e entregar um resultado funcional, verificável e diretamente utilizável.
 
@@ -337,22 +337,24 @@ continueCode.addEventListener('click',()=>{if(!connected||busy||history.length<3
 document.querySelectorAll('[data-cmd]').forEach(button=>button.addEventListener('click',()=>{if(!busy){input.value=prompts[button.dataset.cmd];input.focus()}}));
 document.querySelector('#input-area').addEventListener('submit',async event=>{
  event.preventDefault();const text=input.value.trim();if(busy||!text)return;if(!connected){await checkServer();if(!connected)return;}
- let savedUser={role:'user',content:text};input.value='';add('> '+text+(fileInput.files.length?' · '+[...fileInput.files].map(file=>file.name).join(', '):''));const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta online...');controller=new AbortController();let answer='';
+ let savedUser={role:'user',content:text};input.value='';add('> '+text+(fileInput.files.length?' · '+[...fileInput.files].map(file=>file.name).join(', '):''));const out=add('GUINHO > ','answer');busy=true;controls();setStatus('Gerando resposta online...');controller=new AbortController();let answer='';let requestTimer=null;
  try{
   const built=await prepareAttachments([...fileInput.files]);
   const linguisticContext=await getLinguisticContext(text);
   const requestUser={role:'user',content:text+built.text+linguisticContext};
   savedUser={role:'user',content:text+(built.names.length?'\n[Anexos: '+built.names.join(', ')+']':'')};
-  const context=[...history,requestUser].slice(-21);
+  const context=[history[0], ...[...history.slice(1),requestUser].slice(-(MAX_CONTEXT_MESSAGES-1))];
   const url=ONLINE_API;
   const avoidProviders=new Set();
   let lastError=null;
+  requestTimer=setTimeout(()=>controller.abort(),45000);
+  const requestedTokens=/\b(c[oó]digo|arquivo|implemente|desenvolva|programa|jogo|script|api|site|pwa)\b/i.test(text)?4096:2048;
   for(let attempt=0;attempt<3;attempt++){
    answer='';
    out.textContent='GUINHO > '+(attempt?'[reconectando...]':'[processando...]');
    let activeProvider='';
    try{
-    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,avoidProviders:[...avoidProviders],stream:true,temperature:0.55,top_p:0.9,max_tokens:32000}),signal:controller.signal});
+    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:context,avoidProviders:[...avoidProviders],stream:true,temperature:0.55,top_p:0.9,max_tokens:requestedTokens}),signal:controller.signal});
     activeProvider=response.headers.get('x-guinho-provider')||'';
     if(!response.ok||!response.body){
       let detail='';
@@ -386,7 +388,7 @@ document.querySelector('#input-area').addEventListener('submit',async event=>{
   if(lastError)throw lastError;
   if(answer){const now=new Date().toISOString();history.push({...savedUser,createdAt:now},{role:'assistant',content:answer,createdAt:new Date().toISOString()});await persistCurrentConversation(true);addDownloadPanel(answer);fileInput.value='';renderFiles();setStatus('ONLINE ATIVO · pronto para outro comando')}else{out.textContent='GUINHO > [nenhum texto recebido]'}
  }catch(ex){const fallback=buildLocalFallbackAnswer(text,ex);out.textContent='GUINHO > '+fallback;out.classList.remove('error');const now=new Date().toISOString();history.push({...savedUser,createdAt:now},{role:'assistant',content:fallback,createdAt:new Date().toISOString()});await persistCurrentConversation(false);setStatus('Modo biblioteca local ativo; servidor de IA em recuperação.');}
- finally{busy=false;controller=null;controls();input.focus()}
+  finally{if(requestTimer)clearTimeout(requestTimer);busy=false;controller=null;controls();input.focus()}
 });
 installButton.addEventListener('click',async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;return}add('[PWA] Use o menu do navegador e escolha "Instalar aplicativo".')});
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event});
