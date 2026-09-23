@@ -75,3 +75,39 @@ Variáveis aceitas na Vercel:
 Os modelos podem ser definidos com OPENROUTER_MODEL, NVIDIA_MODEL, GROQ_MODEL, DEEPSEEK_MODEL e GEMINI_MODEL. Chaves nunca são enviadas ao navegador nem gravadas no código.
 
 `GUINHO_PROVIDER_ORDER` aceita uma lista separada por vírgulas. Mesmo que ZeroGPU apareça nessa lista, ele permanece depois dos provedores HTTP para não consumir a cota gratuita antes do failover necessário.
+
+
+## Roteador local automático (Android/Termux)
+
+O arquivo `guinho-router.py` cria um único endpoint local em `http://127.0.0.1:8090`. Ele escolhe automaticamente o modelo pelo pedido e mantém somente um GGUF carregado por vez:
+
+- Qwen Coder: código, erros, terminal e desenvolvimento;
+- Nemotron Nano: análise, explicações longas e planejamento;
+- Gemma: saudações, testes e respostas curtas.
+
+O roteador inicia e encerra o `llama-server` Vulkan sozinho. Os nomes esperados na pasta `~/storage/downloads/I.As` são:
+
+```text
+qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf
+gemma-3-270m-it-UD-Q8_K_XL.gguf
+```
+
+Execute no Termux:
+
+```bash
+cd ~/llama.cpp
+ps -A | grep '[l]lama-server'
+# se houver um servidor antigo usando 8080, encerre apenas o PID exibido:
+kill PID
+python ~/guinho-router.py
+```
+
+O navegador deve abrir uma cópia local do `Guinho-Code-Qwen-Local.html` em HTTP, no mesmo aparelho, por exemplo:
+
+```bash
+cd ~/guinho-code
+python -m http.server 3000 --bind 127.0.0.1
+```
+
+Depois abra `http://127.0.0.1:3000/Guinho-Code-Qwen-Local.html`. A página já usa `127.0.0.1:8090`; não use a porta 8080 diretamente. A primeira pergunta após trocar de modelo demora mais porque o GGUF precisa ser carregado. O modo local é para o aparelho que executa o Termux; ele não torna esse modelo acessível publicamente no Vercel.
