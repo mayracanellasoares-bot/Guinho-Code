@@ -374,8 +374,8 @@ document.getElementById('chatForm').addEventListener('submit',async event=>{
   }catch(error){bubble('bot','Falha no Gemma local: '+error.message);status('Verifique se o navegador suporta WebGPU ou recarregue a página.')}finally{gemmaBusy=false;$('send').disabled=false;$('message').focus()}
 },true);
 </script>
-<script>window.chtlConfig={chatbotId:"3418865189",display:"fullscreen"}</script>
-<script async data-id="3418865189" id="chtl-script" data-display="fullscreen" type="text/javascript" src="https://chatling.ai/js/embed.js"></script>
+<script>window.chtlConfig={chatbotId:"3418865189",display:"floating"}</script>
+<script async data-id="3418865189" id="chtl-script" data-display="floating" type="text/javascript" src="https://chatling.ai/js/embed.js"></script>
 </body></html>'''
 
 
