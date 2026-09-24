@@ -332,7 +332,10 @@ localButton.addEventListener('click',async()=>{
   if(gemma){gemmaLocal=!gemmaLocal;localButton.textContent=gemmaLocal?'Usar biblioteca/SLM':'Ativar Gemma local';localState.textContent=gemmaLocal?'Gemma ativo no navegador.':'Modo biblioteca ativo.';return;}
   localButton.disabled=true;localState.textContent='Carregando Gemma 3 270M…';
   try{
-    const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
+    const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
+    // Android browsers are more reliable with a single-threaded WASM backend.
+    env.backends.onnx.wasm.numThreads=1;
+    env.backends.onnx.wasm.proxy=false;
     const progress=info=>{if(info?.status==='progress'&&Number.isFinite(info.progress))localState.textContent=`Baixando Gemma 3 270M… ${Math.round(info.progress)}%`;else if(info?.status==='ready')localState.textContent='Preparando Gemma no navegador…'};
     const hasWebGPU=Boolean(navigator.gpu);
     if(!hasWebGPU) localState.textContent='Este navegador não oferece WebGPU; tentando CPU…';
@@ -342,7 +345,7 @@ localButton.addEventListener('click',async()=>{
       catch(cpuError){throw Error(`WebGPU: ${webgpuError.message||webgpuError}; CPU: ${cpuError.message||cpuError}`)}
     }
     gemmaLocal=true;localButton.disabled=false;localButton.textContent='Usar biblioteca/SLM';localState.textContent='Gemma ativo no navegador.';
-  }catch(error){const detail=String(error.message||error).replace(/\s+/g,' ').slice(0,220);localButton.disabled=false;localState.textContent='Gemma indisponível: '+detail;status('O navegador não conseguiu executar o Gemma. A biblioteca determinística continua disponível.')}
+  }catch(error){const raw=String(error.message||error).replace(/\s+/g,' ');const detail=/11180944/.test(raw)?'o runtime ONNX deste navegador não suporta o modelo':raw.slice(0,180);localButton.disabled=false;localState.textContent='Gemma indisponível: '+detail;status('O navegador não conseguiu executar o Gemma. A biblioteca determinística continua disponível.')}
 });
 document.getElementById('chatForm').addEventListener('submit',async event=>{
   if(!gemmaLocal||gemmaBusy)return;
