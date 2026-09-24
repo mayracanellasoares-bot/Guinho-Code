@@ -335,6 +335,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
+    def do_HEAD(self):
+        if self.path in ("/", "/index.html"):
+            payload = HTML.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            return
+        self.send_response(404)
+        self.end_headers()
+
     def do_GET(self):
         path, _, query = self.path.partition("?")
         params = dict(re.findall(r"(?:^|&)([a-z_]+)=([a-zA-Z0-9_-]+)", query))
