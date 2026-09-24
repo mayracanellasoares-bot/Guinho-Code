@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: dev-eliza
+    runtime: python
+    rootDir: gameeliza
+    buildCommand: python3 -m py_compile app.py
+    startCommand: python3 app.py
+    healthCheckPath: /
+    autoDeploy: true
