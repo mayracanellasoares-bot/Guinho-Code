@@ -10,7 +10,8 @@ import webbrowser
 ROOT = os.path.abspath(os.path.dirname(__file__))
 LIBRARY = os.path.join(ROOT, "biblioteca")
 DATABASE = os.path.join(ROOT, "memoria_projetos.db")
-HOST, PORT = "127.0.0.1", 8000
+HOST = os.environ.get("HOST", "0.0.0.0")
+PORT = int(os.environ.get("PORT", "8000"))
 EXTENSIONS = {".gd": "godot", ".cs": "csharp", ".py": "python", ".cpp": "cpp", ".js": "javascript", ".html": "html", ".css": "css", ".sql": "sql", ".json": "json", ".txt": "text"}
 LANGUAGES = {"all", "godot", "csharp", "python", "cpp", "javascript", "html", "css", "sql", "text"}
 MAX_UPLOAD_BYTES = 512 * 1024
@@ -488,7 +489,7 @@ def main():
         print("Porta 8000 indisponível:", error)
         return
     with server:
-        print("Dev_Eliza MultiDev em http://127.0.0.1:8000 (Ctrl+C encerra)", flush=True)
+        print(f"Dev_Eliza MultiDev em http://{HOST}:{PORT} (Ctrl+C encerra)", flush=True)
         if "--open" in os.sys.argv:
             webbrowser.open("http://127.0.0.1:8000")
         try:
