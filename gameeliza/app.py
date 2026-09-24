@@ -325,9 +325,19 @@ Promise.all([refreshFiles(),refreshProjects()]).catch(e=>status(e.message));
 // Browser SLM: Gemma 3 270M runs locally through Transformers.js/WebGPU.
 let gemma=null, gemmaLocal=false, gemmaBusy=false;
 const localBox=document.createElement('div');localBox.className='stack';localBox.style.marginTop='12px';
+const localTitle=document.createElement('strong');localTitle.textContent='LLM local (GGUF)';
+const localEndpoint=document.createElement('input');localEndpoint.type='url';localEndpoint.value=localStorage.getItem('devElizaLocalEndpoint')||'http://127.0.0.1:8090';localEndpoint.placeholder='http://127.0.0.1:8090';localEndpoint.setAttribute('aria-label','Endereço da API LLM local');
+const localModel=document.createElement('input');localModel.value=localStorage.getItem('devElizaLocalModel')||'auto';localModel.placeholder='Modelo (auto ou nome do modelo)';localModel.setAttribute('aria-label','Modelo local');
+const localConnect=document.createElement('button');localConnect.type='button';localConnect.textContent='Conectar LLM local';
+const localHelp=document.createElement('small');localHelp.className='muted';localHelp.textContent='O GGUF precisa estar rodando no llama-server/router do dispositivo.';
 const localButton=document.createElement('button');localButton.type='button';localButton.textContent='Ativar Gemma local';
 const localState=document.createElement('small');localState.className='muted';localState.textContent='O modelo será baixado uma vez e executado neste navegador.';
-localBox.append(localButton,localState);document.querySelector('.top').append(localBox);
+localBox.append(localTitle,localEndpoint,localModel,localConnect,localHelp,localButton,localState);document.querySelector('.top').append(localBox);
+let localLLM=false,localBusy=false;
+function localURL(path){return localEndpoint.value.replace(/\/$/,'')+path}
+localConnect.addEventListener('click',async()=>{const base=localEndpoint.value.trim().replace(/\/$/,'');if(!/^https?:\/\//i.test(base)){localState.textContent='Informe uma URL http:// ou https:// válida.';return}try{const response=await fetch(base+'/health',{method:'GET'});if(!response.ok)throw Error('HTTP '+response.status);localStorage.setItem('devElizaLocalEndpoint',base);localStorage.setItem('devElizaLocalModel',localModel.value.trim()||'auto');localLLM=true;localConnect.textContent='Desconectar LLM local';localState.textContent='LLM local conectado. As mensagens irão para o GGUF.';status('Modo LLM local ativo.')}catch(error){localLLM=false;localState.textContent='Não conectou ao LLM local. Inicie o llama-server/router e tente novamente.';status('Falha na conexão local: '+error.message)}});
+localEndpoint.addEventListener('change',()=>{localLLM=false;localConnect.textContent='Conectar LLM local'});
+localConnect.addEventListener('dblclick',()=>{localLLM=false;localConnect.textContent='Conectar LLM local';localState.textContent='Modo LLM local desligado.'});
 localButton.addEventListener('click',async()=>{
   if(gemma){gemmaLocal=!gemmaLocal;localButton.textContent=gemmaLocal?'Usar biblioteca/SLM':'Ativar Gemma local';localState.textContent=gemmaLocal?'Gemma ativo no navegador.':'Modo biblioteca ativo.';return;}
   localButton.disabled=true;localState.textContent='Carregando Gemma 3 270M…';
@@ -348,6 +358,7 @@ localButton.addEventListener('click',async()=>{
   }catch(error){const raw=String(error.message||error).replace(/\s+/g,' ');const detail=/11180944/.test(raw)?'o runtime ONNX deste navegador não suporta o modelo':raw.slice(0,180);localButton.disabled=false;localState.textContent='Gemma indisponível: '+detail;status('O navegador não conseguiu executar o Gemma. A biblioteca determinística continua disponível.')}
 });
 document.getElementById('chatForm').addEventListener('submit',async event=>{
+  if(localLLM&&!localBusy){event.preventDefault();event.stopImmediatePropagation();const text=$('message').value.trim();if(!text)return;bubble('user',text);$('message').value='';$('send').disabled=true;localBusy=true;status('Consultando o GGUF local…');let context={snippets:[],memory:{terms:[]}};try{try{context=await api('/api/chat','POST',{message:text,language:$('language').value,project_id:active});show(context.snippets[0]);renderMemory(context.memory)}catch{status('Render offline; enviando diretamente ao GGUF local…')}const response=await fetch(localURL('/v1/chat/completions'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:localModel.value.trim()||'auto',messages:[{role:'system',content:'Você é Dev_Eliza, assistente de programação. Responda em português e entregue código quando solicitado.'},{role:'user',content:text}],max_tokens:512,stream:false})});const data=await response.json();if(!response.ok)throw Error(data.error?.message||'HTTP '+response.status);const answer=data.choices?.[0]?.message?.content;if(!answer)throw Error('O LLM local não retornou conteúdo');bubble('bot',answer.trim());status('Resposta gerada pelo GGUF local.'+(context.snippets.length?' Biblioteca consultada.':' Offline, sem consulta à biblioteca online.'))}catch(error){bubble('bot','Falha no LLM local: '+error.message);status('Verifique se o llama-server/router está ativo e acessível pelo navegador.')}finally{localBusy=false;$('send').disabled=false;$('message').focus()}return;}
   if(!gemmaLocal||gemmaBusy)return;
   event.preventDefault();event.stopImmediatePropagation();
   const text=$('message').value.trim();if(!text)return;
