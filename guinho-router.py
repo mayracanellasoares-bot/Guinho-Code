@@ -145,8 +145,12 @@ def compact_messages(messages: Any) -> list[dict[str, str]]:
     return ([result_system] if result_system else []) + selected
 
 
-def choose_model(messages: Any) -> tuple[str, dict[str, int]]:
+def choose_model(messages: Any, requested_model: Any = "auto") -> tuple[str, dict[str, int]]:
     """Choose a model using explicit commands first, then weighted intent cues."""
+
+    requested = str(requested_model or "auto").casefold().strip().lstrip("/")
+    if requested in {"qwen", "nemotron", "gemma"}:
+        return requested, {requested: 100}
 
     text = _latest_user_text(messages).strip()
     lowered = text.casefold()
@@ -356,7 +360,7 @@ class RouterHandler(BaseHTTPRequestHandler):
         payload = self._read_payload()
         if payload is None:
             return
-        model_name, scores = choose_model(payload["messages"])
+        model_name, scores = choose_model(payload["messages"], payload.get("model", "auto"))
         payload["messages"] = compact_messages(payload["messages"])
         try:
             # Serializes switching and inference so a second request cannot kill
