@@ -321,6 +321,38 @@ $('approve').addEventListener('click',async()=>{try{const data=await api('/api/s
 $('savePrefs').addEventListener('click',async()=>{try{const data=await api('/api/projects','PATCH',{project_id:active,preferences:$('preferences').value});projects=projects.map(p=>p.id===active?data.project:p);status('Preferências salvas.')}catch(e){status(e.message)}});
 $('saveNote').addEventListener('click',async()=>{try{const note=$('bugNote').value.trim();await api('/api/projects/notes','POST',{project_id:active,note});$('bugNote').value='';await loadProject();status('Nota salva.')}catch(e){status(e.message)}});
 Promise.all([refreshFiles(),refreshProjects()]).catch(e=>status(e.message));
+
+// Browser SLM: Gemma 3 270M runs locally through Transformers.js/WebGPU.
+let gemma=null, gemmaLocal=false, gemmaBusy=false;
+const localBox=document.createElement('div');localBox.className='stack';localBox.style.marginTop='12px';
+const localButton=document.createElement('button');localButton.type='button';localButton.textContent='Ativar Gemma local';
+const localState=document.createElement('small');localState.className='muted';localState.textContent='O modelo será baixado uma vez e executado neste navegador.';
+localBox.append(localButton,localState);document.querySelector('.top').append(localBox);
+localButton.addEventListener('click',async()=>{
+  if(gemma){gemmaLocal=!gemmaLocal;localButton.textContent=gemmaLocal?'Usar biblioteca/SLM':'Ativar Gemma local';localState.textContent=gemmaLocal?'Gemma ativo no navegador.':'Modo biblioteca ativo.';return;}
+  localButton.disabled=true;localState.textContent='Carregando Gemma 3 270M…';
+  try{
+    const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
+    try{gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:'webgpu',dtype:'q4f16'});}
+    catch(webgpuError){gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:'wasm',dtype:'q8'});}
+    gemmaLocal=true;localButton.disabled=false;localButton.textContent='Usar biblioteca/SLM';localState.textContent='Gemma ativo no navegador.';
+  }catch(error){localButton.disabled=false;localState.textContent='Gemma indisponível neste navegador; usando a biblioteca local.';status('Falha ao carregar o Gemma: '+error.message)}
+});
+document.getElementById('chatForm').addEventListener('submit',async event=>{
+  if(!gemmaLocal||gemmaBusy)return;
+  event.preventDefault();event.stopImmediatePropagation();
+  const text=$('message').value.trim();if(!text)return;
+  bubble('user',text);$('message').value='';$('send').disabled=true;gemmaBusy=true;status('Consultando o Gemma local…');
+  try{
+    const context=await api('/api/chat','POST',{message:text,language:$('language').value,project_id:active});
+    show(context.snippets[0]);renderMemory(context.memory);
+    const snippet=context.snippets[0]?`\nTrecho da biblioteca:\n${context.snippets[0].code.slice(0,12000)}`:'';
+    const prompt=`Você é Dev_Eliza, assistente de programação. Responda em português, seja objetiva e entregue código somente quando solicitado.\nPergunta: ${text}${snippet}\nResposta:`;
+    const generated=await gemma(prompt,{max_new_tokens:220,do_sample:true,temperature:0.25,top_p:0.9,return_full_text:false});
+    const answer=Array.isArray(generated)?(generated[0]?.generated_text||'Não foi possível gerar uma resposta.'):String(generated);
+    bubble('bot',answer.trim());status(context.snippets.length?'Gemma respondeu usando a biblioteca local.':'Gemma respondeu localmente.');
+  }catch(error){bubble('bot','Falha no Gemma local: '+error.message);status('Verifique se o navegador suporta WebGPU ou recarregue a página.')}finally{gemmaBusy=false;$('send').disabled=false;$('message').focus()}
+},true);
 </script></body></html>'''
 
 
