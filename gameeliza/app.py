@@ -334,13 +334,15 @@ localButton.addEventListener('click',async()=>{
   try{
     const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
     const progress=info=>{if(info?.status==='progress'&&Number.isFinite(info.progress))localState.textContent=`Baixando Gemma 3 270M… ${Math.round(info.progress)}%`;else if(info?.status==='ready')localState.textContent='Preparando Gemma no navegador…'};
-    try{gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:'webgpu',dtype:'q4f16',progress_callback:progress});}
+    const hasWebGPU=Boolean(navigator.gpu);
+    if(!hasWebGPU) localState.textContent='Este navegador não oferece WebGPU; tentando CPU…';
+    try{gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:hasWebGPU?'webgpu':'wasm',dtype:hasWebGPU?'q4f16':'q4',progress_callback:progress});}
     catch(webgpuError){
       try{localState.textContent='WebGPU incompatível; tentando CPU…';gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:'wasm',dtype:'q8',progress_callback:progress});}
       catch(cpuError){throw Error(`WebGPU: ${webgpuError.message||webgpuError}; CPU: ${cpuError.message||cpuError}`)}
     }
     gemmaLocal=true;localButton.disabled=false;localButton.textContent='Usar biblioteca/SLM';localState.textContent='Gemma ativo no navegador.';
-  }catch(error){localButton.disabled=false;localState.textContent='Gemma indisponível neste navegador.';status('Falha ao inicializar o Gemma: '+String(error.message||error).slice(0,240))}
+  }catch(error){const detail=String(error.message||error).replace(/\s+/g,' ').slice(0,220);localButton.disabled=false;localState.textContent='Gemma indisponível: '+detail;status('O navegador não conseguiu executar o Gemma. A biblioteca determinística continua disponível.')}
 });
 document.getElementById('chatForm').addEventListener('submit',async event=>{
   if(!gemmaLocal||gemmaBusy)return;
