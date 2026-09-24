@@ -333,8 +333,9 @@ localButton.addEventListener('click',async()=>{
   localButton.disabled=true;localState.textContent='Carregando Gemma 3 270M…';
   try{
     const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
-    try{gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:'webgpu',dtype:'q4f16'});}
-    catch(webgpuError){gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:'wasm',dtype:'q8'});}
+    const progress=info=>{if(info?.status==='progress'&&Number.isFinite(info.progress))localState.textContent=`Baixando Gemma 3 270M… ${Math.round(info.progress)}%`;else if(info?.status==='ready')localState.textContent='Preparando Gemma no navegador…'};
+    try{gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:'webgpu',dtype:'q4f16',progress_callback:progress});}
+    catch(webgpuError){localState.textContent='WebGPU indisponível; usando modo CPU leve…';gemma=await pipeline('text-generation','onnx-community/gemma-3-270m-it-ONNX',{device:'wasm',dtype:'q4',progress_callback:progress});}
     gemmaLocal=true;localButton.disabled=false;localButton.textContent='Usar biblioteca/SLM';localState.textContent='Gemma ativo no navegador.';
   }catch(error){localButton.disabled=false;localState.textContent='Gemma indisponível neste navegador; usando a biblioteca local.';status('Falha ao carregar o Gemma: '+error.message)}
 });
