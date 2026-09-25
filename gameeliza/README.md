@@ -16,6 +16,7 @@ A biblioteca contém snippets originais, organizados por linguagem e tema. A bus
 Formatos aceitos: `.html`, `.css`, `.txt`, `.gd`, `.cs`, `.py`, `.cpp`, `.js`, `.sql` e `.json`.
 
 
+
 ## Escolha de IA instalada no Termux (Gemma / Smol)
 
 A aba **LLM local** possui um seletor: Automático, Gemma, Smol, Qwen Coder e
@@ -24,9 +25,9 @@ e expõe a lista no endpoint `/models`.
 
 1. Atualize **também no aparelho** o arquivo `guinho-router.py` deste
    repositório. Alterações no GitHub não substituem automaticamente a cópia
-   em ``/guinho-router.py`.
-2. Coloque os GGUFs em ``/storage/downloads/I.As`, ``/storage/downloads`
-   (inclusive uma subpasta), ou ``/models`. Nomes contendo `gemma` e
+   em `~/guinho-router.py`.
+2. Coloque os GGUFs em `~/storage/downloads/I.As`, `~/storage/downloads`
+   (inclusive uma subpasta), ou `~/models`. Nomes contendo `gemma` e
    `smol` são detectados sem precisar renomear os arquivos. Para um
    diretório diferente, configure `GUINHO_MODEL_DIR` antes de iniciar.
 3. Se houver vários arquivos ambíguos, indique o arquivo exato:
@@ -36,7 +37,7 @@ e expõe a lista no endpoint `/models`.
    export GUINHO_SMOL_MODEL="$HOME/storage/downloads/I.As/seu-smol.gguf"
    ```
 
-4. Execute `python `/guinho-router.py` e verifique os arquivos reconhecidos:
+4. Execute `python ~/guinho-router.py` e verifique os arquivos reconhecidos:
 
    ```bash
    curl -s http://127.0.0.1:8090/models
