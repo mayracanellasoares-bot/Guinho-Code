@@ -105,7 +105,7 @@ function renderText(body,answer){
  for(const part of parts){if(!part)continue;const match=part.match(new RegExp('^'+fence+'([^\\n]*)\\n([\\s\\S]*?)'+fence+'$'));
   if(!match){const prose=document.createElement('div');prose.className='prose';prose.textContent=part;body.appendChild(prose);continue}
   const language=match[1].trim().split(/\s+/)[0]||'código',source=match[2].replace(/\n$/,'');
-  const box=document.createElement('div');box.className='code-panel',head=document.createElement('div');head.className='code-head';
+  const box=document.createElement('div'),head=document.createElement('div');box.className='code-panel';head.className='code-head';
   const label=document.createElement('span');label.textContent=language.toUpperCase();
   const copy=document.createElement('button');copy.type='button';copy.textContent='Copiar código';copy.addEventListener('click',()=>copyText(source,copy));
   const pre=document.createElement('pre'),code=document.createElement('code');code.textContent=source;pre.appendChild(code);head.append(label,copy);box.append(head,pre);body.appendChild(box);
@@ -123,7 +123,7 @@ function actionButtons(body,answer){
 function addMessage(message){
  const el=document.createElement('article');el.className='msg '+message.role;
  const avatar=document.createElement('div');avatar.className='avatar';avatar.setAttribute('aria-hidden','true');avatar.textContent='✳';
- const content=document.createElement('div');content.className='msg-content',role=document.createElement('div');role.className='role';
+ const content=document.createElement('div'),role=document.createElement('div');content.className='msg-content';role.className='role';
  role.textContent=message.role==='user'?'Você':'Eliza Dev';
  if(message.model&&message.role==='assistant'){const small=document.createElement('small');small.textContent='· '+message.model;role.appendChild(small)}
  const body=document.createElement('div');body.className='body';
@@ -134,7 +134,7 @@ function addMessage(message){
 }
 function renderChat(){
  chatInner.replaceChildren();const c=selectedChat();if(!c||!c.messages.length){
-  const welcome=document.createElement('section');welcome.className='welcome',mark=document.createElement('div');mark.className='welcome-mark';mark.textContent='✳';
+  const welcome=document.createElement('section'),mark=document.createElement('div');welcome.className='welcome';mark.className='welcome-mark';mark.textContent='✳';
   const h=document.createElement('h1'),p=document.createElement('p');h.textContent='O que vamos criar hoje?';p.textContent='Converse, programe e transforme ideias em projetos.';
   const choices=document.createElement('div');choices.className='suggestions';
   [['Criar um jogo HTML','Desenvolva um jogo 2D para celular em HTML, CSS e JavaScript.'],['Revisar meu código','Analise o código que vou anexar e identifique erros e melhorias.'],['Construir um aplicativo','Crie a estrutura de um PWA leve e responsivo.'],['Explicar programação','Explique passo a passo um conceito de programação.']].forEach(([name,prompt])=>{const b=document.createElement('button');b.className='suggestion';b.type='button';b.textContent=name;const small=document.createElement('small');small.textContent='Começar com esta ideia →';b.appendChild(small);b.addEventListener('click',()=>{input.value=prompt;resizeInput();input.focus()});choices.appendChild(b)});
