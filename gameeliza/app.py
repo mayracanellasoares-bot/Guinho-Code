@@ -326,15 +326,15 @@ Promise.all([refreshFiles(),refreshProjects()]).catch(e=>status(e.message));
 // Browser SLM: Gemma 3 270M runs locally through Transformers.js/WebGPU.
 let gemma=null, gemmaLocal=false, gemmaBusy=false;
 const localBox=document.createElement('div');localBox.className='stack';localBox.style.marginTop='12px';
-const localTitle=document.createElement('strong');localTitle.textContent='LLM local (GGUF)';
+const localTitle=document.createElement('strong');localTitle.textContent='LLM local (GGUF / Ollama)';
 const localEndpoint=document.createElement('input');localEndpoint.type='url';localEndpoint.value=localStorage.getItem('devElizaLocalEndpoint')||'http://127.0.0.1:8090';localEndpoint.placeholder='http://127.0.0.1:8090';localEndpoint.setAttribute('aria-label','Endereço da API LLM local');
 const localModel=document.createElement('select');localModel.id='localModel';localModel.setAttribute('aria-label','Escolher IA instalada no Termux');
-[['auto','Automático (conforme a tarefa)'],['gemma','Gemma · Termux'],['smol','Smol · Termux'],['qwen','Qwen Coder · Termux'],['nemotron','Nemotron · Termux']].forEach(([id,label])=>localModel.add(new Option(label,id)));
+[['auto','Automático (conforme a tarefa)'],['gemma','Gemma 3 270M'],['gemma_ollama','Gemma 3 270M · Ollama'],['smol','SmolLM2 360M'],['smol135','SmolLM2 135M'],['qwen','Qwen Coder'],['nemotron','Nemotron']].forEach(([id,label])=>localModel.add(new Option(label,id)));
 const savedModel=localStorage.getItem('devElizaLocalModel')||'auto';localModel.value=[...localModel.options].some(o=>o.value===savedModel)?savedModel:'auto';
 const localConnect=document.createElement('button');localConnect.type='button';localConnect.textContent='Conectar ao Termux';
-const localHelp=document.createElement('small');localHelp.className='muted';localHelp.textContent='Escolha a IA instalada. O roteador verifica os arquivos GGUF antes de conectar.';
+const localHelp=document.createElement('small');localHelp.className='muted';localHelp.textContent='Selecione Gemma ou Smol instalados no Ollama, ou um GGUF. Somente os modelos locais detectados ficam habilitados.';
 const localButton=document.createElement('button');localButton.type='button';localButton.textContent='Ativar Gemma no navegador';
-const localState=document.createElement('small');localState.className='muted';localState.textContent='Conecte ao Termux para consultar os modelos disponíveis.';
+const localState=document.createElement('small');localState.className='muted';localState.textContent='Conecte ao Termux para consultar GGUF e Ollama.';
 localBox.append(localTitle,localEndpoint,localModel,localConnect,localHelp,localButton,localState);document.querySelector('[data-panel="llm"]').append(localBox);
 let localLLM=false,localBusy=false,availableModels=null;
 function localURL(path){return localEndpoint.value.trim().replace(/\/$/,'')+path}
@@ -344,13 +344,16 @@ async function fetchLocalModels(base){
   const result=await response.json();
   if(!Array.isArray(result.models))throw Error('Catálogo /models inválido');
   availableModels=new Map(result.models.map(m=>[m.id,m]));
-  for(const option of localModel.options){
-    if(option.value==='auto')continue;
-    const entry=availableModels.get(option.value);
-    option.disabled=!entry?.available;
-    const name=option.value==='qwen'?'Qwen Coder':option.value==='nemotron'?'Nemotron':option.value==='gemma'?'Gemma':'Smol';
-    option.textContent=name+(entry?.available?' ✓':' · não encontrado');
+  const selected=localModel.value;
+  localModel.replaceChildren(new Option('Automático (conforme a tarefa)','auto'));
+  for(const entry of result.models){
+    const source=entry.source==='ollama'?'Ollama':entry.source==='gguf'?'GGUF':'não encontrado';
+    const option=new Option(entry.label+' · '+source,entry.id);
+    option.disabled=!entry.available;
+    localModel.add(option);
   }
+  localModel.value=[...localModel.options].some(o=>o.value===selected)?selected:'auto';
+  if(![...localModel.options].some(o=>o.value===selected))localState.textContent='Seleção anterior não reconhecida. Revise o modelo antes de enviar.';
   return result;
 }
 function selectedModelAvailable(){
@@ -370,7 +373,7 @@ localConnect.addEventListener('click',async()=>{
     const catalog=await fetchLocalModels(base);
     localStorage.setItem('devElizaLocalEndpoint',base);
     localStorage.setItem('devElizaLocalModel',localModel.value);
-    if(!selectedModelAvailable())throw Error(localModel.value==='auto'?'Nenhum modelo GGUF instalado foi encontrado.':'Modelo '+localModel.value+' não encontrado no Termux. Confira o arquivo em /models.');
+    if(!selectedModelAvailable())throw Error(localModel.value==='auto'?'Nenhum modelo local foi encontrado no GGUF ou Ollama.':'Modelo '+localModel.value+' não encontrado no Termux. Confira o arquivo em /models.');
     localLLM=true;
     localConnect.textContent='Desconectar Termux';
     const selected=localModel.options[localModel.selectedIndex].textContent;
@@ -414,7 +417,7 @@ localButton.addEventListener('click',async()=>{
   }catch(error){const raw=String(error.message||error).replace(/\s+/g,' ');const detail=/11180944/.test(raw)?'o runtime ONNX deste navegador não suporta o modelo':raw.slice(0,180);localButton.disabled=false;localState.textContent='Gemma indisponível: '+detail;status('O navegador não conseguiu executar o Gemma. A biblioteca determinística continua disponível.')}
 });
 document.getElementById('chatForm').addEventListener('submit',async event=>{
-  if(localLLM&&!localBusy){event.preventDefault();event.stopImmediatePropagation();const text=$('message').value.trim();if(!text)return;bubble('user',text);$('message').value='';$('send').disabled=true;localBusy=true;status('Consultando o GGUF local…');let context={snippets:[],memory:{terms:[]}};try{try{context=await api('/api/chat','POST',{message:text,language:$('language').value,project_id:active});show(context.snippets[0]);renderMemory(context.memory)}catch{status('Render offline; enviando diretamente ao GGUF local…')}const response=await fetch(localURL('/v1/chat/completions'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:localModel.value.trim()||'auto',messages:[{role:'system',content:'Você é Dev_Eliza, assistente de programação. Responda em português e entregue código quando solicitado.'},{role:'user',content:text}],max_tokens:512,stream:false})});const data=await response.json();if(!response.ok)throw Error(data.message||data.error?.message||data.error||'HTTP '+response.status);const answer=data.choices?.[0]?.message?.content;if(!answer)throw Error(data.message||data.error?.message||data.error||'O LLM local não retornou conteúdo');bubble('bot',answer.trim());status('Resposta gerada pelo GGUF local.'+(context.snippets.length?' Biblioteca consultada.':' Offline, sem consulta à biblioteca online.'))}catch(error){bubble('bot',context.response?context.response+'\n\n[IA Termux indisponível: '+error.message+']':'Falha no LLM local: '+error.message);status('IA Termux indisponível; '+(context.response?'resposta da biblioteca exibida.':'verifique o roteador e o arquivo GGUF.'))}finally{localBusy=false;$('send').disabled=false;$('message').focus()}return;}
+  if(localLLM&&!localBusy){event.preventDefault();event.stopImmediatePropagation();const text=$('message').value.trim();if(!text)return;bubble('user',text);$('message').value='';$('send').disabled=true;localBusy=true;status('Consultando a IA local selecionada…');let context={snippets:[],memory:{terms:[]}};try{try{context=await api('/api/chat','POST',{message:text,language:$('language').value,project_id:active});show(context.snippets[0]);renderMemory(context.memory)}catch{status('Render offline; enviando diretamente ao GGUF local…')}const response=await fetch(localURL('/v1/chat/completions'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:localModel.value.trim()||'auto',messages:[{role:'system',content:'Você é Dev_Eliza, assistente de programação. Responda em português e entregue código quando solicitado.'},{role:'user',content:text}],max_tokens:512,stream:false})});const data=await response.json();if(!response.ok)throw Error(data.message||data.error?.message||data.error||'HTTP '+response.status);const answer=data.choices?.[0]?.message?.content;if(!answer)throw Error(data.message||data.error?.message||data.error||'O LLM local não retornou conteúdo');bubble('bot',answer.trim());status('Resposta gerada pela IA local.'+(context.snippets.length?' Biblioteca consultada.':' Offline, sem consulta à biblioteca online.'))}catch(error){bubble('bot',context.response?context.response+'\n\n[IA Termux indisponível: '+error.message+']':'Falha no LLM local: '+error.message);status('IA Termux indisponível; '+(context.response?'resposta da biblioteca exibida.':'verifique o roteador e o arquivo GGUF.'))}finally{localBusy=false;$('send').disabled=false;$('message').focus()}return;}
   if(!gemmaLocal||gemmaBusy)return;
   event.preventDefault();event.stopImmediatePropagation();
   const text=$('message').value.trim();if(!text)return;
