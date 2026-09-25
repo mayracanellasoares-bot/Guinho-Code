@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
 """Eliza Dev: PWA local com seletor GGUF + Ollama, sem dependências externas."""
 
+import base64
 import json
 import os
 import re
+import secrets
+import threading
 import zipfile
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("ELIZA_PORT", "8000"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 ROUTER_URL = os.environ.get("ELIZA_ROUTER_URL", "http://127.0.0.1:8090").rstrip("/")
 DEFAULT_MODEL = os.environ.get("ELIZA_DEFAULT_MODEL", "auto")
+REQUIRE_AUTH = os.environ.get("ELIZA_REQUIRE_AUTH", "0") == "1"
+ACCESS_USER = os.environ.get("ELIZA_ACCESS_USER", "eliza")
+ACCESS_PASSWORD = os.environ.get("ELIZA_ACCESS_PASSWORD", "")
+ALLOW_CLOUD = os.environ.get("ELIZA_ALLOW_CLOUD", "1") == "1"
+INFERENCE_SLOT = threading.BoundedSemaphore(1)
+if REQUIRE_AUTH and not ACCESS_PASSWORD:
+    raise RuntimeError("Defina ELIZA_ACCESS_PASSWORD antes de iniciar a versão pública.")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MANIFEST = json.dumps({
@@ -225,7 +236,7 @@ def models_catalog():
         if key not in entries and tag in installed_tags:
             entries[key] = {"id": key, "label": label, "source": "ollama", "available": True,
                             "upstream": "ollama", "tag": tag}
-    if CLOUD_TAG in installed_tags:
+    if ALLOW_CLOUD and CLOUD_TAG in installed_tags:
         entries["gemma_cloud"] = {"id": "gemma_cloud", "label": "Gemma 4 31B Cloud (requer internet)",
                                   "source": "ollama-cloud", "available": True, "upstream": "ollama", "tag": CLOUD_TAG}
     local_ready = any(key != "gemma_cloud" for key in entries)
@@ -347,6 +358,41 @@ def make_zip(text):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def require_login(self):
+        """Protect every route, including /api/chat and the PWA assets."""
+        if not REQUIRE_AUTH:
+            return False
+        raw = self.headers.get("Authorization", "")
+        accepted = False
+        if raw.startswith("Basic "):
+            try:
+                value = base64.b64decode(raw[6:].strip(), validate=True).decode("utf-8")
+                user, password = value.split(":", 1)
+                accepted = (secrets.compare_digest(user, ACCESS_USER)
+                            & secrets.compare_digest(password, ACCESS_PASSWORD))
+            except (ValueError, UnicodeError):
+                pass
+        if accepted:
+            return False
+        body = b"Acesso restrito: informe o usuario e a senha do Eliza."
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="Eliza Dev", charset="UTF-8"')
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+        return True
+
+    def verify_origin(self):
+        """Reject browser cross-site POSTs; same-origin and CLI requests work."""
+        origin = self.headers.get("Origin", "")
+        if not origin:
+            return True
+        parsed = urlsplit(origin)
+        host = self.headers.get("Host", "")
+        return parsed.scheme in ("http", "https") and parsed.netloc.lower() == host.lower()
+
     def log_message(self, fmt, *args):
         print(f"[Eliza Dev] {self.address_string()} - {fmt % args}")
 
@@ -355,19 +401,19 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(raw)
 
     def do_OPTIONS(self):
+        if self.require_login():
+            return
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
     def do_GET(self):
+        if self.require_login():
+            return
         path = self.path.split("?", 1)[0]
         if path == "/manifest.webmanifest":
             raw = MANIFEST.encode("utf-8")
@@ -420,8 +466,17 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
+        if self.require_login():
+            return
+        if not self.verify_origin():
+            self.send_json(403, {"error": "Origem não autorizada."})
+            return
         if self.path not in ("/api/chat", "/api/package"):
             self.send_error(404)
+            return
+        guarded = self.path == "/api/chat"
+        if guarded and not INFERENCE_SLOT.acquire(blocking=False):
+            self.send_json(429, {"error": "Uma geração já está em andamento. Aguarde e tente novamente."})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -455,10 +510,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(503, {"error": "Serviço de IA indisponível: " + str(exc.reason)})
         except Exception as exc:
             self.send_json(500, {"error": str(exc)})
+        finally:
+            if guarded:
+                INFERENCE_SLOT.release()
 
 
 if __name__ == "__main__":
     print(f"Eliza Dev em http://{HOST}:{PORT}")
     print(f"Roteador: {ROUTER_URL} | Ollama: {OLLAMA_URL} | modelo padrão: {DEFAULT_MODEL}")
+    print("Autenticação: " + ("ativada" if REQUIRE_AUTH else "desativada (uso local)"))
     print("Pressione CTRL+C para encerrar.")
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
