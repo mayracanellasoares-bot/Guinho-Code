@@ -42,7 +42,7 @@ MANIFEST = json.dumps({
     ],
 }, ensure_ascii=False)
 
-SERVICE_WORKER = """const CACHE='eliza-dev-pwa-v4';
+SERVICE_WORKER = """const CACHE='eliza-dev-pwa-v4-1';
 const ASSETS=['/manifest.webmanifest','/icon-192.png','/icon-512.png'];
 self.addEventListener('install',event=>{self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('eliza-dev-pwa-')&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()]))});
@@ -72,12 +72,27 @@ HTML = r'''<!doctype html>
 <aside class="sidebar" aria-label="Conversas"><div class="brand"><div class="brandmark" aria-hidden="true">✳</div><div><strong>Eliza Dev</strong><small>Seu espaço para criar</small></div></div>
 <button id="newChat" class="side-action" type="button"><span aria-hidden="true">＋</span> Nova conversa</button><div class="side-heading">Conversas recentes</div><nav id="history" class="history" aria-label="Histórico local"></nav><div class="side-footer"><strong>● Eliza no seu servidor</strong><div id="modelInfo" role="status">Verificando modelos…</div><div style="margin-top:8px">Conversas salvas somente neste navegador.</div></div></aside>
 <div id="backdrop" class="backdrop"></div><div class="workspace">
-<header class="topbar"><button id="menuButton" class="iconbtn hamburger" type="button" aria-label="Abrir menu" aria-expanded="false">☰</button><div class="top-title">Eliza <span>Dev</span></div><div class="model-picker"><label for="model">Modelo</label><select id="model" aria-label="Escolher modelo de IA"><option value="auto">Consultando modelos…</option></select><button type="button" id="refreshModels" class="iconbtn" title="Atualizar modelos" aria-label="Atualizar modelos">↻</button></div><div class="top-spacer"></div><span id="status" class="status" role="status">Iniciando</span><button id="mobileNew" class="iconbtn mobile-new" type="button" title="Nova conversa" aria-label="Nova conversa">＋</button></header>
+<header class="topbar"><button id="menuButton" class="iconbtn hamburger" type="button" aria-label="Abrir menu" aria-expanded="false">☰</button><div class="top-title">Eliza <span>Dev</span></div><div class="model-picker"><label for="model">Modelo</label><select id="model" aria-label="Escolher modelo de IA"><option value="auto">Consultando modelos…</option></select><button type="button" id="refreshModels" class="iconbtn" title="Atualizar modelos" aria-label="Atualizar modelos">↻</button></div><div class="top-spacer"></div><span id="status" class="status" role="status">Carregando IA…</span><button id="mobileNew" class="iconbtn mobile-new" type="button" title="Nova conversa" aria-label="Nova conversa">＋</button></header>
 <main id="chat" class="chat-scroll" role="log" aria-live="polite"><div id="chatInner" class="chat-inner"></div></main>
 <div class="composer-wrap"><form id="form" class="composer"><textarea id="input" rows="1" placeholder="Pergunte ao Eliza ou descreva seu código…" aria-label="Sua mensagem"></textarea><div class="composer-row"><label class="clip" for="files" title="Anexar código, texto ou imagem" aria-label="Anexar arquivos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.5 11.5-8.8 8.8a5 5 0 0 1-7.1-7.1l9.2-9.2a3.5 3.5 0 0 1 5 5l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg><input id="files" type="file" multiple accept="*/*"></label><span id="fileNames" class="file-names">Anexar arquivo</span><button type="button" id="clearHistory" class="iconbtn" title="Excluir esta conversa" aria-label="Excluir esta conversa" style="font-size:17px">♲</button><button id="send" class="send" type="submit" aria-label="Enviar mensagem" title="Enviar mensagem">↑</button></div></form><div class="composer-hint">As respostas são geradas pelos modelos conectados ao seu servidor.</div></div>
 </div></div>
 <script>
 'use strict';
+// Private-mode browsers and some embedded WebViews can block localStorage.
+// The chat must still load even if persistent storage is denied.
+const safeStore={
+ getItem(k){try{return localStorage.getItem(k)}catch(e){return null}},
+ setItem(k,v){try{localStorage.setItem(k,v)}catch(e){}},
+ removeItem(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+function reportClientError(e){
+ const status=document.querySelector('#status'),info=document.querySelector('#modelInfo');
+ const message='Falha na interface: '+String(e?.message||e?.reason?.message||e||'erro desconhecido').slice(0,160);
+ if(status){status.textContent=message;status.style.color='#ff8d8d'}
+ if(info)info.textContent=message;
+}
+window.addEventListener('error',reportClientError);
+window.addEventListener('unhandledrejection',reportClientError);
 const qs=s=>document.querySelector(s);
 const app=qs('#app'),chat=qs('#chat'),chatInner=qs('#chatInner'),form=qs('#form'),input=qs('#input'),send=qs('#send'),statusEl=qs('#status'),fileInput=qs('#files'),fileNames=qs('#fileNames'),modelSelect=qs('#model'),modelInfo=qs('#modelInfo'),refreshButton=qs('#refreshModels'),historyEl=qs('#history'),menuButton=qs('#menuButton');
 const KEY='elizaDevChatsV4',OLD_KEY='elizaDevChatV3',MODEL_KEY='elizaDevModelV3';
@@ -90,12 +105,12 @@ menuButton.addEventListener('click',toggleMenu);qs('#backdrop').addEventListener
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 function makeChat(){return{id:String(Date.now())+Math.random().toString(36).slice(2,9),title:'Nova conversa',messages:[]}}
 function saveHistory(){
- try{localStorage.setItem(KEY,JSON.stringify({activeId,chats:chats.slice(0,24).map(c=>({id:c.id,title:c.title,messages:c.messages.slice(-24).map(m=>({role:m.role,content:m.content.slice(0,40000),display:m.display?.slice(0,40000),model:m.model||''}))}))}))}
+ try{safeStore.setItem(KEY,JSON.stringify({activeId,chats:chats.slice(0,24).map(c=>({id:c.id,title:c.title,messages:c.messages.slice(-24).map(m=>({role:m.role,content:m.content.slice(0,40000),display:m.display?.slice(0,40000),model:m.model||''}))}))}))}
  catch(e){modelInfo.textContent='Armazenamento local cheio; limpe conversas antigas.'}
 }
 function initHistory(){
  try{
-  const state=JSON.parse(localStorage.getItem(KEY)||'null');
+  const state=JSON.parse(safeStore.getItem(KEY)||'null');
   if(state&&Array.isArray(state.chats)){
    for(const c of state.chats.slice(0,24)){if(!c||typeof c.id!=='string'||!Array.isArray(c.messages))continue;
     const clean=c.messages.slice(-24).filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string').map(m=>({role:m.role,content:m.content,display:typeof m.display==='string'?m.display:m.content,model:typeof m.model==='string'?m.model:''}));
@@ -103,7 +118,7 @@ function initHistory(){
    }
    activeId=chats.some(c=>c.id===state.activeId)?state.activeId:'';
   }else{
-   const old=JSON.parse(localStorage.getItem(OLD_KEY)||'[]');
+   const old=JSON.parse(safeStore.getItem(OLD_KEY)||'[]');
    if(Array.isArray(old)&&old.length){
     const c=makeChat();c.messages=old.slice(-24).filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string').map(m=>({role:m.role,content:m.content,display:m.content,model:m.model||''}));
     c.title=c.messages.find(m=>m.role==='user')?.content.slice(0,38)||'Conversa anterior';chats.push(c);activeId=c.id;
@@ -180,23 +195,29 @@ function renderChat(){
   welcome.append(mark,h,p,choices);chatInner.appendChild(welcome);
  }else c.messages.forEach(addMessage);scrollDown();
 }
-initHistory();renderHistory();renderChat();
+try{initHistory();renderHistory();renderChat();}
+catch(err){
+ reportClientError(err);
+ // A corrupted previously saved chat must not block the AI selector.
+ chats.length=0;const fresh=makeChat();chats.push(fresh);activeId=fresh.id;
+ try{chatInner.replaceChildren();renderHistory();renderChat()}catch(e){reportClientError(e)}
+}
 function chosenLabel(){return modelSelect.options[modelSelect.selectedIndex]?.textContent||modelSelect.value}
 async function loadModels(){
  refreshButton.disabled=true;modelInfo.textContent='Consultando serviços locais…';
- const previous=localStorage.getItem(MODEL_KEY)||modelSelect.value||'auto';
  try{
+  const previous=safeStore.getItem(MODEL_KEY)||modelSelect.value||'auto';
   const response=await fetch('/api/models',{cache:'no-store'});const data=await response.json();if(!response.ok||!Array.isArray(data.models))throw Error(data.error||'Catálogo inválido');
   catalog=new Map(data.models.map(item=>[item.id,item]));modelSelect.replaceChildren();
   for(const item of data.models){const provider=item.source==='ollama-cloud'?'nuvem':item.source==='gguf'?'GGUF':item.source==='ollama'?'Ollama':'local';const option=new Option(item.label+' · '+provider+(item.available?'':' (offline)'),item.id);option.disabled=!item.available;modelSelect.add(option)}
   const available=catalog.get(previous)?.available?previous:(catalog.get('auto')?.available?'auto':data.models.find(x=>x.available)?.id||'');
-  modelSelect.value=available;localStorage.setItem(MODEL_KEY,available);
+  modelSelect.value=available;safeStore.setItem(MODEL_KEY,available);
   modelInfo.textContent='Roteador: '+(data.routerConnected?'conectado':'offline')+' · Ollama: '+(data.ollamaConnected?'conectado':'offline');
   setStatus(available?'Pronto':'Sem modelos disponíveis',available?'#a6edce':'#ff8d8d');send.disabled=!available;
  }catch(e){modelInfo.textContent='Não foi possível consultar modelos: '+e.message;setStatus('IA indisponível','#ff8d8d');send.disabled=true}
  finally{refreshButton.disabled=false}
 }
-modelSelect.addEventListener('change',()=>{localStorage.setItem(MODEL_KEY,modelSelect.value);setStatus('Modelo: '+chosenLabel())});
+modelSelect.addEventListener('change',()=>{safeStore.setItem(MODEL_KEY,modelSelect.value);setStatus('Modelo: '+chosenLabel())});
 refreshButton.addEventListener('click',loadModels);loadModels();
 function updateFiles(){fileNames.textContent=selectedFiles.length?selectedFiles.map(f=>f.name).join(', '):'Anexar arquivo';fileNames.title=fileNames.textContent}
 fileInput.addEventListener('change',()=>{selectedFiles=[...fileInput.files];updateFiles()});
