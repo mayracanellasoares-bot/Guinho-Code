@@ -5,12 +5,14 @@ on:
       - "guinho-router.py"
       - "gameeliza/app.py"
       - "tests/test_eliza_models.py"
+      - "tests/test_eliza_ollama.py"
       - ".github/workflows/test-eliza-models.yml"
   pull_request:
     paths:
       - "guinho-router.py"
       - "gameeliza/app.py"
       - "tests/test_eliza_models.py"
+      - "tests/test_eliza_ollama.py"
       - ".github/workflows/test-eliza-models.yml"
 
 jobs:
@@ -23,8 +25,8 @@ jobs:
           python-version: "3.11"
       - name: Validate Python and model routing tests
         run: |
-          python -m py_compile guinho-router.py gameeliza/app.py tests/test_eliza_models.py
-          python -m unittest discover -s tests -p 'test_eliza_models.py' -v
+          python -m py_compile guinho-router.py gameeliza/app.py tests/test_eliza_models.py tests/test_eliza_ollama.py
+          python -m unittest discover -s tests -p 'test_eliza_*.py' -v
       - name: Validate embedded frontend JavaScript
         run: |
           python - <<'PY'

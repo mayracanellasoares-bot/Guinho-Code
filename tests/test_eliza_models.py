@@ -17,7 +17,7 @@ class LocalModelTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
-        models = {name: self.directory / f"{name}.gguf" for name in router.MODEL_LABELS}
+        models = {name: self.directory / f"{name}.gguf" for name in router.MODELS}
         self.model_patch = mock.patch.object(router, "MODEL_DIR", self.directory)
         self.models_patch = mock.patch.object(router, "MODELS", models)
         self.home_patch = mock.patch.object(router.Path, "home", return_value=self.directory)
@@ -61,7 +61,7 @@ class LocalModelTests(unittest.TestCase):
         self.assertEqual(name, "gemma")
 
     def test_no_installed_models_is_not_reported_as_online(self):
-        with self.assertRaisesRegex(ValueError, "Nenhum GGUF"):
+        with self.assertRaisesRegex(ValueError, "Nenhum modelo local"):
             router.choose_model([{"role": "user", "content": "Oi"}], "auto", set())
 
     def test_explicit_file_override(self):

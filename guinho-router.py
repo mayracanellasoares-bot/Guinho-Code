@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Local Guinho model router for Termux/llama.cpp.
+"""Local Guinho model router for Termux/llama.cpp and Ollama.
 
 The router exposes one OpenAI-compatible endpoint on 127.0.0.1:8090. It
-selects one GGUF model for each request, keeps only that model loaded in
-llama-server, and proxies the response from 127.0.0.1:8080.
+routes installed GGUF files to llama-server on port 8080, or installed
+Ollama model tags to Ollama on port 11434. Cloud tags are not selected.
 
 No third-party Python package is required. The router is intentionally bound
 to localhost; it is not a public internet server.
@@ -32,6 +32,8 @@ ROUTER_HOST = os.environ.get("GUINHO_ROUTER_HOST", "127.0.0.1")
 ROUTER_PORT = int(os.environ.get("GUINHO_ROUTER_PORT", "8090"))
 LLAMA_HOST = os.environ.get("GUINHO_LLAMA_HOST", "127.0.0.1")
 LLAMA_PORT = int(os.environ.get("GUINHO_LLAMA_PORT", "8080"))
+OLLAMA_HOST = os.environ.get("GUINHO_OLLAMA_HOST", "127.0.0.1")
+OLLAMA_PORT = int(os.environ.get("GUINHO_OLLAMA_PORT", "11434"))
 LLAMA_BIN = Path(
     os.environ.get(
         "GUINHO_LLAMA_BIN",
@@ -55,7 +57,17 @@ MODELS = {
     "smol": MODEL_DIR / "smol.gguf",  # discovered by filename; no rename needed
 }
 
-MODEL_LABELS = {"qwen": "Qwen Coder", "nemotron": "Nemotron Nano", "gemma": "Gemma", "smol": "Smol"}
+MODEL_LABELS = {
+    "qwen": "Qwen Coder (GGUF)", "nemotron": "Nemotron Nano (GGUF)",
+    "gemma": "Gemma 3 270M", "gemma_ollama": "Gemma 3 270M (Ollama)",
+    "smol": "SmolLM2 360M", "smol135": "SmolLM2 135M",
+}
+OLLAMA_MODEL_TAGS = {
+    "smol": "smollm2:360m",
+    "smol135": "smollm2:135m",
+    "gemma": "gemma3:270m",
+    "gemma_ollama": "gemma3:270m",
+}
 MODEL_ENV_KEYS = {"qwen": "GUINHO_QWEN_MODEL", "nemotron": "GUINHO_NEMOTRON_MODEL",
                   "gemma": "GUINHO_GEMMA_MODEL", "smol": "GUINHO_SMOL_MODEL"}
 
@@ -83,7 +95,7 @@ def discover_models() -> dict[str, Path]:
         except OSError:
             continue
     result: dict[str, Path] = {}
-    for name in MODEL_LABELS:
+    for name in MODELS:
         configured = os.environ.get(MODEL_ENV_KEYS[name], "").strip()
         if configured:
             chosen = Path(configured).expanduser()
@@ -108,13 +120,52 @@ def discover_models() -> dict[str, Path]:
     return result
 
 
-def model_catalog(installed: dict[str, Path]) -> list[dict[str, Any]]:
+def discover_ollama_models() -> set[str]:
+    """Fetch installed Ollama tags from the local daemon, never auto-pull them."""
+    try:
+        with urllib.request.urlopen(
+            f"http://{OLLAMA_HOST}:{OLLAMA_PORT}/api/tags", timeout=2.5
+        ) as response:
+            if response.status != HTTPStatus.OK:
+                return set()
+            data = json.load(response)
+    except (OSError, urllib.error.URLError, ValueError, TypeError):
+        return set()
+    if not isinstance(data, dict) or not isinstance(data.get("models"), list):
+        return set()
+    result: set[str] = set()
+    for model in data["models"]:
+        if not isinstance(model, dict):
+            continue
+        name = model.get("name", model.get("model"))
+        if isinstance(name, str) and name.casefold().strip():
+            result.add(name.casefold().strip())
+    return result
+
+
+def available_sources(
+    installed: dict[str, Path], ollama_tags: set[str]
+) -> dict[str, dict[str, str]]:
+    """Resolve each UI ID to a local provider and an exact installed model."""
+    sources: dict[str, dict[str, str]] = {}
+    for name, path in installed.items():
+        sources[name] = {"provider": "gguf", "model": str(path)}
+    for name, tag in OLLAMA_MODEL_TAGS.items():
+        if tag in ollama_tags and name not in sources:
+            sources[name] = {"provider": "ollama", "model": tag}
+    return sources
+
+
+def model_catalog(
+    installed: dict[str, Path], ollama_tags: set[str] | None = None
+) -> list[dict[str, Any]]:
+    sources = available_sources(installed, ollama_tags or set())
     return [
-        {"id":name, "label":label, "available":name in installed,
-         "filename":installed[name].name if name in installed else None}
+        {"id": name, "label": label, "available": name in sources,
+         "source": sources[name]["provider"] if name in sources else None,
+         "filename": Path(sources[name]["model"]).name if name in sources else None}
         for name, label in MODEL_LABELS.items()
     ]
-
 
 CODE_TERMS = re.compile(
     r"\b(c[oó]digo|programa|programar|script|bug|erro|debug|html|css|javascript|typescript|python|java|c\+\+|c#|sql|json|yaml|xml|api|github|git|npm|pip|docker|vercel|pwa|canvas|react|vue|classe|fun[cç][aã]o|algoritmo|terminal|compilar|compile|deploy|banco de dados|regex)\b",
@@ -217,7 +268,7 @@ def choose_model(
         raise ValueError(f"Modelo desconhecido: {requested}")
     text = _latest_user_text(messages).strip()
     lowered = text.casefold()
-    explicit = re.search(r"(?:^|\s)/(qwen|nemotron|gemma|smol)(?:\s|$)", lowered)
+    explicit = re.search(r"(?:^|\s)/(qwen|nemotron|gemma_ollama|smol135|gemma|smol)(?:\s|$)", lowered)
     if requested == "auto" and explicit:
         requested = explicit.group(1)
     if requested != "auto":
@@ -225,7 +276,7 @@ def choose_model(
             raise ValueError(f"{MODEL_LABELS[requested]} não encontrado. Verifique /models ou configure {MODEL_ENV_KEYS[requested]}.")
         return requested, {requested: 100}
 
-    scores = {"qwen": 0, "nemotron": 0, "gemma": 0, "smol": 0}
+    scores = {"qwen": 0, "nemotron": 0, "gemma": 0, "smol": 0, "smol135": 0, "gemma_ollama": 0}
     if CODE_TERMS.search(text):
         scores["qwen"] += 6
         scores["smol"] += 3
@@ -247,10 +298,12 @@ def choose_model(
         ("nemotron", "smol", "gemma", "qwen") if scores["nemotron"] else
         ("gemma", "smol", "nemotron", "qwen")
     )
+    # The explicit variants remain manual options; auto uses the default aliases.
+    order += ("smol135", "gemma_ollama")
     for name in order:
         if name in installed:
             return name, scores
-    raise ValueError("Nenhum GGUF encontrado. Consulte /models e GUINHO_MODEL_DIR.")
+    raise ValueError("Nenhum modelo local encontrado. Confira GGUF e Ollama em /models.")
 
 
 def _health_url() -> str:
@@ -391,8 +444,9 @@ class RouterHandler(BaseHTTPRequestHandler):
             return
         if self.path == "/models":
             installed = discover_models()
-            self._send_json({"ok": True, "models": model_catalog(installed),
-                             "activeModel": ACTIVE_MODEL})
+            tags = discover_ollama_models()
+            self._send_json({"ok": True, "models": model_catalog(installed, tags),
+                             "activeModel": ACTIVE_MODEL, "ollamaConnected": bool(tags)})
             return
         if self.path != "/health":
             self._send_json({"ok": False, "error": "not_found"}, 404)
@@ -437,23 +491,33 @@ class RouterHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         installed = discover_models()
+        ollama_tags = discover_ollama_models()
+        sources = available_sources(installed, ollama_tags)
         MODELS.update(installed)
         try:
             model_name, scores = choose_model(
-                payload["messages"], payload.get("model", "auto"), set(installed)
+                payload["messages"], payload.get("model", "auto"), set(sources)
             )
         except ValueError as error:
             self._send_json({"ok": False, "error": "model_selection_failed",
-                             "message": str(error), "models": model_catalog(installed)}, 400)
+                             "message": str(error), "models": model_catalog(installed, ollama_tags)}, 400)
             return
         payload["messages"] = compact_messages(payload["messages"])
         try:
             # Serializes switching and inference so a second request cannot kill
             # the model while the first request is still receiving its stream.
             with PROCESS_LOCK:
-                ensure_model(model_name)
-                payload["model"] = model_name
-                self._proxy(payload, model_name, scores)
+                source = sources[model_name]
+                if source["provider"] == "gguf":
+                    ensure_model(model_name)
+                    payload["model"] = model_name
+                    self._proxy(payload, model_name, scores)
+                else:
+                    # Release only our own llama-server; never terminate Ollama.
+                    stop_backend()
+                    payload["model"] = source["model"]
+                    self._proxy(payload, model_name, scores,
+                                host=OLLAMA_HOST, port=OLLAMA_PORT, provider="ollama")
         except Exception as error:  # noqa: BLE001 - return a useful local API error
             print(f"[guinho-router] model={model_name} failed: {error}", flush=True)
             self._send_json(
@@ -468,9 +532,11 @@ class RouterHandler(BaseHTTPRequestHandler):
                 model_name,
             )
 
-    def _proxy(self, payload: dict[str, Any], model_name: str, scores: dict[str, int]) -> None:
+    def _proxy(self, payload: dict[str, Any], model_name: str, scores: dict[str, int],
+               host: str = LLAMA_HOST, port: int = LLAMA_PORT,
+               provider: str = "gguf") -> None:
         body = json_bytes(payload)
-        connection = HTTPConnection(LLAMA_HOST, LLAMA_PORT, timeout=180)
+        connection = HTTPConnection(host, port, timeout=180)
         try:
             connection.request(
                 "POST",
@@ -482,11 +548,11 @@ class RouterHandler(BaseHTTPRequestHandler):
             if response.status >= 400:
                 detail = response.read(256 * 1024).decode("utf-8", "replace")
                 print(
-                    f"[guinho-router] llama-server HTTP {response.status}: {detail[:1000]}",
+                    f"[guinho-router] {provider} HTTP {response.status}: {detail[:1000]}",
                     flush=True,
                 )
                 self._send_json(
-                    {"ok": False, "error": "llama_server_error", "status": response.status, "detail": detail},
+                    {"ok": False, "error": "model_backend_error", "provider": provider, "status": response.status, "detail": detail},
                     502,
                     model_name,
                 )
@@ -498,6 +564,7 @@ class RouterHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", content_type)
             self.send_header("Cache-Control", "no-cache")
             self.send_header("X-Guinho-Model", model_name)
+            self.send_header("X-Guinho-Provider", provider)
             self.send_header("X-Guinho-Scores", json.dumps(scores, separators=(",", ":")))
             # SSE has no Content-Length; close this downstream response so the
             # browser can observe the end of the stream without hanging.
@@ -509,7 +576,7 @@ class RouterHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", content_length)
             self.end_headers()
             while True:
-                chunk = response.read(64 * 1024)
+                chunk = response.read1(8192)
                 if not chunk:
                     break
                 self.wfile.write(chunk)
