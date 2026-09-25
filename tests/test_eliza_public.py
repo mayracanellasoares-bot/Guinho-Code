@@ -60,7 +60,11 @@ class SecurityTests(unittest.TestCase):
     def test_local_authenticated_ui(self):
         status, headers, body = self.request("GET", "/?v=3", auth=True)
         self.assertEqual(status, 200)
-        self.assertIn(b"ELIZA_DEV", body)
+        self.assertIn(b"Eliza Dev", body)
+        self.assertIn(b'id="history"', body)
+        self.assertIn(b'id="model"', body)
+        self.assertIn(b'id="files"', body)
+        self.assertIn(b"elizaDevChatsV4", body)
         self.assertEqual(headers["Cache-Control"], "no-store")
 
     def test_cross_site_write_rejected(self):

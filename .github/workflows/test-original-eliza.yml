@@ -3,11 +3,15 @@ on:
   push:
     paths:
       - "eliza-dev-pwa/eliza_server_clip.py"
+      - "eliza-dev-pwa/ui-v4.html"
+      - "tests/test_eliza_ui.cjs"
       - "tests/test_eliza_public.py"
       - ".github/workflows/test-original-eliza.yml"
   pull_request:
     paths:
       - "eliza-dev-pwa/eliza_server_clip.py"
+      - "eliza-dev-pwa/ui-v4.html"
+      - "tests/test_eliza_ui.cjs"
       - "tests/test_eliza_public.py"
       - ".github/workflows/test-original-eliza.yml"
 jobs:
@@ -28,8 +32,11 @@ jobs:
           html=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='HTML' for t in n.targets))
           js=re.search(r'<script>(.*?)</script>',html,re.S)
           assert js and 'modelSelect' in js.group(1)
+          assert html == pathlib.Path('eliza-dev-pwa/ui-v4.html').read_text()
+          assert 'eliza-dev-pwa-v4' in src
           pathlib.Path('/tmp/eliza-original.js').write_text(js.group(1))
           PY
           node --check /tmp/eliza-original.js
+          node --test tests/test_eliza_ui.cjs
       - name: Test phone-hosted deployment security
         run: python -m unittest discover -s tests -p "test_eliza_public.py" -v
