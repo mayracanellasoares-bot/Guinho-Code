@@ -1,0 +1,42 @@
+name: Test Eliza local models
+on:
+  push:
+    paths:
+      - "guinho-router.py"
+      - "gameeliza/app.py"
+      - "tests/test_eliza_models.py"
+      - ".github/workflows/test-eliza-models.yml"
+  pull_request:
+    paths:
+      - "guinho-router.py"
+      - "gameeliza/app.py"
+      - "tests/test_eliza_models.py"
+      - ".github/workflows/test-eliza-models.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate Python and model routing tests
+        run: |
+          python -m py_compile guinho-router.py gameeliza/app.py tests/test_eliza_models.py
+          python -m unittest discover -s tests -p 'test_eliza_models.py' -v
+      - name: Validate embedded frontend JavaScript
+        run: |
+          python - <<'PY'
+          import ast
+          import pathlib
+          import re
+          tree = ast.parse(pathlib.Path("gameeliza/app.py").read_text(encoding="utf-8"))
+          html = next(ast.literal_eval(node.value) for node in tree.body
+                      if isinstance(node, ast.Assign)
+                      and any(isinstance(t, ast.Name) and t.id == "HTML" for t in node.targets))
+          script = re.search(r"<script>(.*?)</script>", html, flags=re.S)
+          assert script, "Embedded frontend script not found"
+          pathlib.Path("/tmp/eliza-ui.js").write_text(script.group(1), encoding="utf-8")
+          PY
+          node --check /tmp/eliza-ui.js
