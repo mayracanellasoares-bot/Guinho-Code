@@ -1,0 +1,31 @@
+name: Test original Eliza PWA multimodel
+on:
+  push:
+    paths:
+      - "eliza-dev-pwa/eliza_server_clip.py"
+      - ".github/workflows/test-original-eliza.yml"
+  pull_request:
+    paths:
+      - "eliza-dev-pwa/eliza_server_clip.py"
+      - ".github/workflows/test-original-eliza.yml"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate Python and embedded JavaScript
+        run: |
+          python -m py_compile eliza-dev-pwa/eliza_server_clip.py
+          python - <<'PY'
+          import ast, pathlib, re
+          src=pathlib.Path('eliza-dev-pwa/eliza_server_clip.py').read_text()
+          tree=ast.parse(src)
+          html=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='HTML' for t in n.targets))
+          js=re.search(r'<script>(.*?)</script>',html,re.S)
+          assert js and 'modelSelect' in js.group(1)
+          pathlib.Path('/tmp/eliza-original.js').write_text(js.group(1))
+          PY
+          node --check /tmp/eliza-original.js
