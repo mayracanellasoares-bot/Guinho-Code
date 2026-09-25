@@ -42,7 +42,7 @@ MANIFEST = json.dumps({
     ],
 }, ensure_ascii=False)
 
-SERVICE_WORKER = """const CACHE='eliza-dev-pwa-v4-1';
+SERVICE_WORKER = """const CACHE='eliza-dev-pwa-v4-3';
 const ASSETS=['/manifest.webmanifest','/icon-192.png','/icon-512.png'];
 self.addEventListener('install',event=>{self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('eliza-dev-pwa-')&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()]))});
@@ -159,7 +159,7 @@ function renderText(body,answer){
  for(const part of parts){if(!part)continue;const match=part.match(new RegExp('^'+fence+'([^\\n]*)\\n([\\s\\S]*?)'+fence+'$'));
   if(!match){const prose=document.createElement('div');prose.className='prose';prose.textContent=part;body.appendChild(prose);continue}
   const language=match[1].trim().split(/\s+/)[0]||'código',source=match[2].replace(/\n$/,'');
-  const box=document.createElement('div');box.className='code-panel',head=document.createElement('div');head.className='code-head';
+  const box=document.createElement('div'),head=document.createElement('div');box.className='code-panel';head.className='code-head';
   const label=document.createElement('span');label.textContent=language.toUpperCase();
   const copy=document.createElement('button');copy.type='button';copy.textContent='Copiar código';copy.addEventListener('click',()=>copyText(source,copy));
   const pre=document.createElement('pre'),code=document.createElement('code');code.textContent=source;pre.appendChild(code);head.append(label,copy);box.append(head,pre);body.appendChild(box);
@@ -177,19 +177,19 @@ function actionButtons(body,answer){
 function addMessage(message){
  const el=document.createElement('article');el.className='msg '+message.role;
  const avatar=document.createElement('div');avatar.className='avatar';avatar.setAttribute('aria-hidden','true');avatar.textContent='✳';
- const content=document.createElement('div');content.className='msg-content',role=document.createElement('div');role.className='role';
+ const content=document.createElement('div'),role=document.createElement('div');content.className='msg-content';role.className='role';
  role.textContent=message.role==='user'?'Você':'Eliza Dev';
  if(message.model&&message.role==='assistant'){const small=document.createElement('small');small.textContent='· '+message.model;role.appendChild(small)}
  const body=document.createElement('div');body.className='body';
- if(message.role==='assistant'){renderText(body,message.content);if(message.content)actionButtons(body,message.content)}
+ if(message.role==='assistant')renderText(body,message.content)
  else body.textContent=message.display||message.content;
- content.append(role,body);if(message.role==='assistant')el.append(avatar,content);else el.append(content);
+ content.append(role,body);if(message.role==='assistant'&&message.content)actionButtons(body,message.content);if(message.role==='assistant')el.append(avatar,content);else el.append(content);
  chatInner.appendChild(el);scrollDown();return{body,role,el};
 }
 function renderChat(){
  chatInner.replaceChildren();const c=selectedChat();if(!c||!c.messages.length){
-  const welcome=document.createElement('section');welcome.className='welcome',mark=document.createElement('div');mark.className='welcome-mark';mark.textContent='✳';
-  const h=document.createElement('h1');h.textContent='O que vamos criar hoje?',p=document.createElement('p');p.textContent='Converse, programe e transforme ideias em projetos.';
+  const welcome=document.createElement('section'),mark=document.createElement('div');welcome.className='welcome';mark.className='welcome-mark';mark.textContent='✳';
+  const h=document.createElement('h1'),p=document.createElement('p');h.textContent='O que vamos criar hoje?';p.textContent='Converse, programe e transforme ideias em projetos.';
   const choices=document.createElement('div');choices.className='suggestions';
   [['Criar um jogo HTML','Desenvolva um jogo 2D para celular em HTML, CSS e JavaScript.'],['Revisar meu código','Analise o código que vou anexar e identifique erros e melhorias.'],['Construir um aplicativo','Crie a estrutura de um PWA leve e responsivo.'],['Explicar programação','Explique passo a passo um conceito de programação.']].forEach(([name,prompt])=>{const b=document.createElement('button');b.className='suggestion';b.type='button';b.textContent=name;const small=document.createElement('small');small.textContent='Começar com esta ideia →';b.appendChild(small);b.addEventListener('click',()=>{input.value=prompt;resizeInput();input.focus()});choices.appendChild(b)});
   welcome.append(mark,h,p,choices);chatInner.appendChild(welcome);

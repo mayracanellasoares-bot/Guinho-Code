@@ -11,8 +11,8 @@ function run({blockedStorage=false, oldHistory=false}={}){
   return {tag, textContent:'',className:'',title:'',value:'auto',style:{},listeners:{},options:[],children:[],disabled:false,scrollTop:0,scrollHeight:10,
     classList:{add(){},remove(){},toggle(){return true}},
     addEventListener(name,cb){this.listeners[name]=cb},setAttribute(){},
-    append(...items){this.children.push(...items)},appendChild(item){this.children.push(item);return item},
-    replaceChildren(...items){this.children=items},add(item){this.options.push(item)},
+    append(...items){for(const item of items){if(item&&typeof item==='object')item.parentElement=this;this.children.push(item)}},appendChild(item){if(item&&typeof item==='object')item.parentElement=this;this.children.push(item);return item},
+    replaceChildren(...items){this.children=[];this.append(...items)},add(item){this.options.push(item)},
     focus(){},remove(){},requestSubmit(){},getAttribute(){return null}
   };
  }
@@ -39,21 +39,30 @@ function run({blockedStorage=false, oldHistory=false}={}){
  catch(e){errors.push(e.message)}
  return{elements,calls,errors};
 }
-test('fresh browser leaves Iniciando and lists models',async()=>{
+test('fresh browser renders greeting and model selector',async()=>{
  const r=run();await new Promise(setImmediate);
  assert.deepEqual(r.errors,[]);
  assert.ok(r.calls.includes('/api/models'),'models endpoint must be requested');
- assert.notEqual(r.elements.get('#status').textContent,'Iniciando');
+ assert.equal(r.elements.get('#status').textContent,'Pronto');
+ const welcome=r.elements.get('#chatInner').children[0];
+ assert.equal(welcome?.className,'welcome','welcome must mount in DOM');
+ assert.equal(welcome?.children[1]?.textContent,'O que vamos criar hoje?');
+ assert.equal(r.elements.get('#model').options.length,2);
 });
-test('old chat migrates without blocking models',async()=>{
+test('old chat renders existing assistant response and its buttons',async()=>{
  const r=run({oldHistory:true});await new Promise(setImmediate);
  assert.deepEqual(r.errors,[]);
  assert.ok(r.calls.includes('/api/models'));
- assert.notEqual(r.elements.get('#status').textContent,'Iniciando');
+ assert.equal(r.elements.get('#status').textContent,'Pronto');
+ const rows=r.elements.get('#chatInner').children;
+ assert.equal(rows.length,2,'old messages should render without blanking the UI');
+ assert.equal(rows[1]?.className,'msg assistant');
+ assert.equal(rows[1]?.children[1]?.children[2]?.className,'actions','copy/download actions mount after body');
 });
-test('browser blocking localStorage still allows models to load',async()=>{
+test('blocked browser storage still renders greeting and models',async()=>{
  const r=run({blockedStorage:true});await new Promise(setImmediate);
  assert.deepEqual(r.errors,[]);
- assert.ok(r.calls.includes('/api/models'),'storage permissions cannot block chat UI');
- assert.notEqual(r.elements.get('#status').textContent,'Iniciando');
+ assert.ok(r.calls.includes('/api/models'));
+ assert.equal(r.elements.get('#status').textContent,'Pronto');
+ assert.equal(r.elements.get('#chatInner').children[0]?.className,'welcome');
 });
