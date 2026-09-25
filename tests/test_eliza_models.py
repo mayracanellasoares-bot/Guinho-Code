@@ -61,7 +61,7 @@ class LocalModelTests(unittest.TestCase):
         self.assertEqual(name, "gemma")
 
     def test_no_installed_models_is_not_reported_as_online(self):
-        with self.assertRaisesRegex(ValueError, "Nenhum GGUF"):
+        with self.assertRaisesRegex(ValueError, "Nenhum modelo local"):
             router.choose_model([{"role": "user", "content": "Oi"}], "auto", set())
 
     def test_explicit_file_override(self):
