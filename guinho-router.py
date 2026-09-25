@@ -52,7 +52,69 @@ MODELS = {
     "qwen": MODEL_DIR / "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
     "nemotron": MODEL_DIR / "NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf",
     "gemma": MODEL_DIR / "gemma-3-270m-it-UD-Q8_K_XL.gguf",
+    "smol": MODEL_DIR / "smol.gguf",  # discovered by filename; no rename needed
 }
+
+MODEL_LABELS = {"qwen": "Qwen Coder", "nemotron": "Nemotron Nano", "gemma": "Gemma", "smol": "Smol"}
+MODEL_ENV_KEYS = {"qwen": "GUINHO_QWEN_MODEL", "nemotron": "GUINHO_NEMOTRON_MODEL",
+                  "gemma": "GUINHO_GEMMA_MODEL", "smol": "GUINHO_SMOL_MODEL"}
+
+
+def discover_models() -> dict[str, Path]:
+    """Find installed GGUFs in the configured folder and common Termux folders.
+
+    GUINHO_*_MODEL may point to an exact file. Existing model names remain
+    supported; SmolLM GGUF names are detected without guessing their version.
+    Only local paths are inspected. This does not download or execute files.
+    """
+    downloads = Path.home() / "storage" / "downloads"
+    folders = (MODEL_DIR, downloads, downloads / "I.As", Path.home() / "models", Path.home())
+    files: dict[str, Path] = {}
+    for folder in folders:
+        if not folder.is_dir():
+            continue
+        try:
+            paths = list(folder.glob("*.gguf"))
+            if folder == downloads:
+                paths += list(folder.glob("*/*.gguf"))
+            for path in paths:
+                if path.is_file():
+                    files[str(path.resolve())] = path.resolve()
+        except OSError:
+            continue
+    result: dict[str, Path] = {}
+    for name in MODEL_LABELS:
+        configured = os.environ.get(MODEL_ENV_KEYS[name], "").strip()
+        if configured:
+            chosen = Path(configured).expanduser()
+            if chosen.is_file() and chosen.suffix.casefold() == ".gguf":
+                result[name] = chosen.resolve()
+            # An explicit invalid path must not silently select a different file.
+            continue
+        preferred = MODELS[name]
+        if preferred.is_file():
+            result[name] = preferred.resolve()
+            continue
+        matches = [file for file in files.values() if name in file.name.casefold()]
+        if not matches:
+            continue
+        # Prefer instruction-tuned Q4_K_M when multiple quantizations are present.
+        matches.sort(key=lambda file: (
+            0 if "q4_k_m" in file.name.casefold() else 1,
+            0 if "instruct" in file.name.casefold() or "-it-" in file.name.casefold() else 1,
+            str(file).casefold(),
+        ))
+        result[name] = matches[0]
+    return result
+
+
+def model_catalog(installed: dict[str, Path]) -> list[dict[str, Any]]:
+    return [
+        {"id":name, "label":label, "available":name in installed,
+         "filename":installed[name].name if name in installed else None}
+        for name, label in MODEL_LABELS.items()
+    ]
+
 
 CODE_TERMS = re.compile(
     r"\b(c[oó]digo|programa|programar|script|bug|erro|debug|html|css|javascript|typescript|python|java|c\+\+|c#|sql|json|yaml|xml|api|github|git|npm|pip|docker|vercel|pwa|canvas|react|vue|classe|fun[cç][aã]o|algoritmo|terminal|compilar|compile|deploy|banco de dados|regex)\b",
@@ -145,41 +207,50 @@ def compact_messages(messages: Any) -> list[dict[str, str]]:
     return ([result_system] if result_system else []) + selected
 
 
-def choose_model(messages: Any, requested_model: Any = "auto") -> tuple[str, dict[str, int]]:
-    """Choose a model using explicit commands first, then weighted intent cues."""
-
+def choose_model(
+    messages: Any, requested_model: Any = "auto", available: set[str] | None = None
+) -> tuple[str, dict[str, int]]:
+    """Honor explicit selection, then route by intent among installed models."""
+    installed = set(MODEL_LABELS) if available is None else set(available)
     requested = str(requested_model or "auto").casefold().strip().lstrip("/")
-    if requested in {"qwen", "nemotron", "gemma"}:
-        return requested, {requested: 100}
-
+    if requested not in {"auto", *MODEL_LABELS}:
+        raise ValueError(f"Modelo desconhecido: {requested}")
     text = _latest_user_text(messages).strip()
     lowered = text.casefold()
-    explicit = re.search(r"(?:^|\s)/(qwen|nemotron|gemma)(?:\s|$)", lowered)
-    if explicit:
-        return explicit.group(1), {explicit.group(1): 100}
+    explicit = re.search(r"(?:^|\s)/(qwen|nemotron|gemma|smol)(?:\s|$)", lowered)
+    if requested == "auto" and explicit:
+        requested = explicit.group(1)
+    if requested != "auto":
+        if requested not in installed:
+            raise ValueError(f"{MODEL_LABELS[requested]} não encontrado. Verifique /models ou configure {MODEL_ENV_KEYS[requested]}.")
+        return requested, {requested: 100}
 
-    scores = {"qwen": 0, "nemotron": 0, "gemma": 0}
+    scores = {"qwen": 0, "nemotron": 0, "gemma": 0, "smol": 0}
     if CODE_TERMS.search(text):
         scores["qwen"] += 6
+        scores["smol"] += 3
     if "```" in text or re.search(r"\.(html?|css|js|ts|py|java|cpp|cs|sql)\b", lowered):
         scores["qwen"] += 5
+        scores["smol"] += 3
     if GENERAL_TERMS.search(text):
         scores["nemotron"] += 5
+        scores["smol"] += 2
     if SIMPLE_TERMS.search(text):
         scores["gemma"] += 3
+        scores["smol"] += 2
     if len(text) <= 160:
         scores["gemma"] += 1
     if len(text) >= 700:
         scores["nemotron"] += 2
 
-    # Coding signals take precedence over generic words such as "qual é".
-    if scores["qwen"]:
-        return "qwen", scores
-    if scores["nemotron"]:
-        return "nemotron", scores
-    if scores["gemma"]:
-        return "gemma", scores
-    return "nemotron", scores
+    order = ("qwen", "smol", "nemotron", "gemma") if scores["qwen"] else (
+        ("nemotron", "smol", "gemma", "qwen") if scores["nemotron"] else
+        ("gemma", "smol", "nemotron", "qwen")
+    )
+    for name in order:
+        if name in installed:
+            return name, scores
+    raise ValueError("Nenhum GGUF encontrado. Consulte /models e GUINHO_MODEL_DIR.")
 
 
 def _health_url() -> str:
@@ -318,6 +389,11 @@ class RouterHandler(BaseHTTPRequestHandler):
                 }
             )
             return
+        if self.path == "/models":
+            installed = discover_models()
+            self._send_json({"ok": True, "models": model_catalog(installed),
+                             "activeModel": ACTIVE_MODEL})
+            return
         if self.path != "/health":
             self._send_json({"ok": False, "error": "not_found"}, 404)
             return
@@ -360,7 +436,16 @@ class RouterHandler(BaseHTTPRequestHandler):
         payload = self._read_payload()
         if payload is None:
             return
-        model_name, scores = choose_model(payload["messages"], payload.get("model", "auto"))
+        installed = discover_models()
+        MODELS.update(installed)
+        try:
+            model_name, scores = choose_model(
+                payload["messages"], payload.get("model", "auto"), set(installed)
+            )
+        except ValueError as error:
+            self._send_json({"ok": False, "error": "model_selection_failed",
+                             "message": str(error), "models": model_catalog(installed)}, 400)
+            return
         payload["messages"] = compact_messages(payload["messages"])
         try:
             # Serializes switching and inference so a second request cannot kill
