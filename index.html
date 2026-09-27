@@ -692,18 +692,24 @@ function addDownloadPanel(answer) {
 }
 
 function buildPrompt(userText, docs) {
+  const contextChars = Math.max(1400, (loadedModel?.context || 1024) * 3 - (loadedModel?.maxTokens || 384) * 3);
+  const systemText = SYSTEM_PROMPT.slice(0, 800);
+  const transcriptBudget = Math.max(0, Math.floor((contextChars - systemText.length - 450) * 0.45));
   const recent = history.filter((message) => message.role === "user" || message.role === "assistant").slice(-6);
   const transcript = recent.map((message) => {
     const label = message.role === "assistant" ? "assistant" : "user";
     return loadedModel?.template === "chatml"
-      ? "<|im_start|>" + label + "\n" + String(message.content).slice(-3000) + "\n<|im_end|>\n"
-      : (label === "assistant" ? "Assistant" : "User") + ":\n" + String(message.content).slice(-2500) + "\n\n";
-  }).join("");
-  const current = String(userText) + String(docs || "");
+      ? "<|im_start|>" + label + "\n" + String(message.content).slice(-1800) + "\n<|im_end|>\n"
+      : (label === "assistant" ? "Assistant" : "User") + ":\n" + String(message.content).slice(-1500) + "\n\n";
+  }).join("").slice(-transcriptBudget);
+  const userPart = String(userText);
+  const docsPart = String(docs || "");
+  const currentBudget = Math.max(600, contextChars - systemText.length - transcript.length - 250);
+  const current = (userPart.slice(0, currentBudget) + (docsPart ? "\n[anexo resumido]\n" + docsPart.slice(0, Math.max(0, currentBudget - userPart.length - 20)) : "")).slice(0, currentBudget);
   if (loadedModel?.template === "chatml") {
-    return "<|im_start|>system\n" + SYSTEM_PROMPT + "\n<|im_end|>\n" + transcript + "<|im_start|>user\n" + current + "\n<|im_end|>\n<|im_start|>assistant\n";
+    return "<|im_start|>system\n" + systemText + "\n<|im_end|>\n" + transcript + "<|im_start|>user\n" + current + "\n<|im_end|>\n<|im_start|>assistant\n";
   }
-  return "System:\n" + SYSTEM_PROMPT + "\n\n" + transcript + "User:\n" + current + "\n\nAssistant:\n";
+  return "System:\n" + systemText + "\n\n" + transcript + "User:\n" + current + "\n\nAssistant:\n";
 }
 
 connect.addEventListener("click", loadModel);
