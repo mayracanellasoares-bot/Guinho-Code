@@ -64,7 +64,7 @@ button:disabled{opacity:.45;cursor:wait}
 <div id="local-engine" class="local-engine" aria-label="Motor de IA local">
 <div class="engine-head"><span class="title">MOTOR LOCAL · WLLAMA / WASM</span><span id="model-state">preparando…</span></div>
 <div class="engine-controls">
-<select id="model-select" aria-label="Modelo GGUF"><option value="qwen" selected>Qwen2.5 0.5B Instruct Q4_K_M · 491 MB · recomendado</option><option value="smol">SmolLM2 360M Instruct Q4_K_M · 271 MB · mais leve</option><option value="tiny">Tiny LLM F16 · 26,7 MB · experimental</option></select>
+<select id="model-select" aria-label="Modelo GGUF"><option value="tiny" selected>Tiny LLM F16 · 26,7 MB · mais rápido</option><option value="smol">SmolLM2 360M Q2_K · 218,7 MB · melhor</option></select>
 <button id="load-model" type="button">Carregar modelo</button><button id="stop-generation" class="stop-button" type="button" disabled>Parar</button>
 <label class="engine-file" for="gguf-file">Abrir GGUF local<input id="gguf-file" type="file" accept=".gguf"></label>
 </div>
@@ -125,29 +125,21 @@ import { Wllama, LoggerWithoutDebug } from "https://cdn.jsdelivr.net/npm/@wllama
 
 const WLLAMA_WASM_URL = "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.5.1/esm/wasm/wllama.wasm";
 const MODELS = {
-  qwen: {
-    label: "Qwen2.5 0.5B Instruct Q4_K_M · 491 MB · recomendado",
-    url: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
-    context: 2048,
-    maxTokens: 768,
-    template: "chatml",
-    detail: "0.5B parâmetros · Instruct · melhor opção leve para português e assistente geral"
-  },
-  smol: {
-    label: "SmolLM2 360M Instruct Q4_K_M · 271 MB · mais leve",
-    url: "https://huggingface.co/unsloth/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
-    context: 2048,
-    maxTokens: 640,
-    template: "chatml",
-    detail: "360M parâmetros · Instruct · download menor, porém respostas mais simples"
-  },
   tiny: {
-    label: "Tiny LLM F16 · 26,7 MB · experimental",
+    label: "Tiny LLM F16 · 26,7 MB · mais rápido",
     url: "https://huggingface.co/mradermacher/Tiny-LLM-GGUF/resolve/main/Tiny-LLM.f16.gguf",
     context: 1024,
     maxTokens: 384,
     template: "plain",
-    detail: "13M parâmetros · modelo base em inglês · não recomendado para conversa"
+    detail: "13M parâmetros · modelo base · respostas curtas e muito rápidas"
+  },
+  smol: {
+    label: "SmolLM2 360M Q2_K · 218,7 MB · melhor",
+    url: "https://huggingface.co/tensorblock/SmolLM2-360M-GGUF/resolve/main/SmolLM2-360M-Q2_K.gguf",
+    context: 2048,
+    maxTokens: 768,
+    template: "chatml",
+    detail: "360M parâmetros · Q2_K · mais capacidade e maior download"
   }
 };
 const SYSTEM_PROMPT = [
