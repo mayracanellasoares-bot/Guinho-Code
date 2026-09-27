@@ -1,4 +1,4 @@
-const CACHE_NAME='guinho-code-shell-v3';
+const CACHE_NAME='guinho-code-shell-v4';
 const SHELL=['/','/index.html','/manifest.webmanifest','/guinho-logo.svg','/guinho-192.png','/guinho-512.png'];
 
 self.addEventListener('install',event=>{
