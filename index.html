@@ -279,11 +279,14 @@ async function closeEngine() {
   engine = null;
   loadedModel = null;
 }
-async function loadModel() {
-  if (loading || busy) return;
+async function loadModel({ allowWhileBusy = false, silent = false } = {}) {
+  if (loading || (busy && !allowWhileBusy)) return false;
   const preset = MODELS[modelSelect.value] || MODELS.tiny;
   const sourceFile = localFile;
-  const canTryGpu = Boolean(navigator.gpu);
+  // WebGPU ainda provoca abortos nativos em alguns navegadores móveis.
+  // Mantemos WASM/CPU como padrão confiável; a aceleração pode ser habilitada
+  // manualmente no console com localStorage.setItem("guinho_enable_webgpu", "1").
+  const canTryGpu = localStorage.getItem("guinho_enable_webgpu") === "1" && Boolean(navigator.gpu);
   loading = true;
   loadedModel = null;
   modelProgress.hidden = false;
@@ -333,7 +336,7 @@ async function loadModel() {
     modelProgress.hidden = true;
     modelState.textContent = (canTryGpu ? "WebGPU/WASM" : "WASM/CPU") + " ativo";
     setStatus("Motor local ativo · " + preset.label + " · sem servidor e sem chave");
-    add("[OK] Wllama carregado no navegador: " + (sourceFile ? sourceFile.name : preset.label));
+    if (!silent) add("[OK] Wllama carregado no navegador: " + (sourceFile ? sourceFile.name : preset.label));
   } catch (error) {
     await closeEngine();
     connected = false;
@@ -346,6 +349,7 @@ async function loadModel() {
     controls();
     if (loadedModel) input.focus();
   }
+  return Boolean(loadedModel);
 }
 
 function openHistoryDb() {
@@ -691,6 +695,11 @@ function addDownloadPanel(answer) {
   term.append(panel);
 }
 
+function isNativeAbort(error) {
+  const message = String(error?.message || error || "").toUpperCase();
+  return /\\bABORT\\b|RUNTIMEERROR|UNREACHABLE|QUEUE WORK FAILED|GGML_ASSERT|RECEIVED ABORT SIGNAL/.test(message);
+}
+
 function buildPrompt(userText, docs) {
   const contextChars = Math.max(1400, (loadedModel?.context || 1024) * 3 - (loadedModel?.maxTokens || 384) * 3);
   const systemText = SYSTEM_PROMPT.slice(0, 800);
@@ -754,24 +763,43 @@ document.querySelector("#input-area").addEventListener("submit", async (event) =
     const built = await prepareAttachments(selectedFiles);
     const prompt = buildPrompt(text, built.text);
     let answer = "";
+    let recoveryAttempted = false;
     setStatus("Inferência local · " + loadedModel.label);
-    await engine.createCompletion({
-      prompt,
-      stream: true,
-      abortSignal: abortController.signal,
-      max_tokens: loadedModel.maxTokens,
-      temperature: 0.35,
-      top_p: 0.9,
-      top_k: 40,
-      stop: loadedModel.template === "chatml" ? ["<|im_end|>"] : undefined,
-      onData: (chunk) => {
-        const token = chunk?.choices?.[0]?.text || "";
-        if (!token) return;
-        answer += token;
-        output.textContent = "GUINHO > " + stripInternalReasoning(answer);
-        term.scrollTop = term.scrollHeight;
+    while (true) {
+      answer = "";
+      output.textContent = "GUINHO > [gerando localmente…]";
+      abortController = new AbortController();
+      try {
+        await engine.createCompletion({
+          prompt,
+          stream: true,
+          abortSignal: abortController.signal,
+          max_tokens: loadedModel.maxTokens,
+          temperature: 0.35,
+          top_p: 0.9,
+          top_k: 40,
+          stop: loadedModel.template === "chatml" ? ["<|im_end|>"] : undefined,
+          onData: (chunk) => {
+            const token = chunk?.choices?.[0]?.text || "";
+            if (!token) return;
+            answer += token;
+            output.textContent = "GUINHO > " + stripInternalReasoning(answer);
+            term.scrollTop = term.scrollHeight;
+          }
+        });
+        break;
+      } catch (error) {
+        const userAborted = abortController.signal.aborted || error?.name === "AbortError";
+        if (!userAborted && !recoveryAttempted && isNativeAbort(error)) {
+          recoveryAttempted = true;
+          output.textContent = "GUINHO > [motor reiniciando…]";
+          setStatus("Falha transitória do acelerador; recarregando em WASM/CPU…");
+          const recovered = await loadModel({ allowWhileBusy: true, silent: true });
+          if (recovered && engine) continue;
+        }
+        throw error;
       }
-    });
+    }
     answer = stripInternalReasoning(answer);
     if (!answer) throw new Error("O modelo terminou sem gerar texto.");
     const now = new Date().toISOString();
@@ -786,10 +814,15 @@ document.querySelector("#input-area").addEventListener("submit", async (event) =
     output.textContent = "GUINHO > " + answer;
     setStatus("Motor local ativo · pronto para outro comando");
   } catch (error) {
-    const aborted = error?.name === "AbortError" || error?.name === "WllamaAbortError";
+    const aborted = error?.name === "AbortError" || error?.name === "WllamaAbortError" || abortController?.signal?.aborted;
+    const nativeAbort = !aborted && isNativeAbort(error);
     output.classList.add("error");
-    output.textContent = aborted ? "[PARADO] Geração interrompida." : "[ERRO LOCAL] " + (error?.message || String(error));
-    setStatus(aborted ? "Motor local pronto." : "Motor local pronto; tente novamente.");
+    output.textContent = aborted
+      ? "[PARADO] Geração interrompida."
+      : nativeAbort
+        ? "[ERRO LOCAL] O motor WASM abortou a inferência. Recarregue o modelo e tente novamente."
+        : "[ERRO LOCAL] " + (error?.message || String(error));
+    setStatus(aborted ? "Motor local pronto." : nativeAbort ? "Motor local precisa ser recarregado." : "Motor local pronto; tente novamente.");
   } finally {
     abortController = null;
     busy = false;
