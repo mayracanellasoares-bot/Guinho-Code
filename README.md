@@ -2,117 +2,60 @@
 
 ![Logo do Guinho-Code](./guinho-logo.svg)
 
-Terminal web para programação com interface responsiva, atalhos, upload de documentos e geração de arquivos.
+Terminal web responsivo para programação, com gatinho em ASCII/PNG, anexos, histórico local e geração de arquivos/ZIP.
 
-## Produção
+## Motor atual: Wllama no navegador
 
-Abra [guinho-code.vercel.app](https://guinho-code.vercel.app/). A aplicação usa Vercel com failover entre provedores gratuitos; as chaves permanecem exclusivamente nas variáveis de ambiente do servidor.
+A interface principal usa **Wllama**, uma compilação WASM do llama.cpp. O navegador carrega um GGUF monolítico diretamente pela internet ou pelo seletor **Abrir GGUF local**; o chat não chama `/api/chat`, não usa Termux e não precisa de chave de API.
 
-Variáveis esperadas na Vercel:
+Modelos disponíveis na interface:
 
-```text
-OPENROUTER_API_KEY=sua_chave
-OPENROUTER_MODEL=openrouter/free
-GROQ_API_KEY=sua_chave_opcional
-NVIDIA_API_KEY=sua_chave_opcional
-GUINHO_PROVIDER_ORDER=groq,openrouter,nvidia,deepseek,gemini
-GUINHO_RATE_LIMIT_MAX=20
-DATABASE_URL=postgresql://usuario:senha@host/database?sslmode=require
-```
+- **Tiny LLM F16** — aproximadamente 26,7 MB; carregamento mais rápido, modelo base e respostas simples.
+- **SmolLM2 360M Q2_K** — aproximadamente 218,7 MB; mais capacidade, com maior tempo de download e inferência.
 
-O endpoint `/api/chat` transmite a resposta por SSE, exclui o raciocínio interno do provedor e faz failover no servidor antes de enviar os headers quando um stream termina sem conteúdo. Se a interrupção ocorrer depois do primeiro token, o cliente recebe um erro SSE explícito e tenta outra fonte.
+Os modelos remotos são baixados dos repositórios públicos do Hugging Face. O Wllama mantém os arquivos no cache do navegador (OPFS/IndexedDB conforme o navegador), então a próxima abertura pode reutilizar o download. O arquivo GGUF não é enviado ao GitHub nem à Vercel.
 
-O modo sem custo tenta, por padrão, Groq, OpenRouter, NVIDIA, DeepSeek e Gemini na ordem configurada. O ZeroGPU é mantido como último recurso. A API limita o primeiro conteúdo a 9 segundos, a inatividade do stream a 20 segundos, o contexto a 14 mensagens e a resposta a 8.192 tokens para evitar que uma fonte gratuita lenta congele a interface.
+### Como usar
 
-`DATABASE_URL` é opcional. Sem ela, o histórico fica salvo no navegador por IndexedDB. Com ela, `/api/history` cria a tabela `guinho_chat_history` automaticamente e sincroniza as conversas por ID anônimo, sem cadastro, email ou senha.
+1. Abra <https://guinho-code.vercel.app/>.
+2. Aguarde o carregamento automático do Tiny LLM ou escolha **SmolLM2**.
+3. Para usar um arquivo seu, selecione **Abrir GGUF local** e depois **Carregar modelo**.
+4. Quando o estado mostrar **WASM ativo** ou **WebGPU/WASM ativo**, digite no terminal.
+5. Anexe PDF, TXT, Markdown, JSON ou código para análise. O limite atual é 2 MB por arquivo e 3 MB no total.
+
+O WebGPU é usado quando o navegador oferece suporte; se falhar, o Guinho tenta WASM/CPU automaticamente. O modelo continua carregado ao trocar de aba; histórico e conversas ficam no navegador.
 
 ## PWA
 
 O projeto inclui:
 
 - `manifest.webmanifest`
-- `guinho-logo.svg`
-- `sw.js` com atualização de documentos em rede e fallback offline
-- botão **Instalar PWA** no navegador compatível
+- `guinho-logo.svg`, `guinho-192.png` e `guinho-512.png`
+- `sw.js` com atualização do shell e fallback offline
+- botão **Instalar PWA**
 
-No Android, abra o site no Chrome e use **Instalar aplicativo** quando o navegador oferecer a instalação. O chat precisa de conexão para chamar a API.
+No Android, abra o site no Chrome e use **Instalar aplicativo**. A interface pode abrir offline depois que o shell e o modelo já estiverem no cache; uma instalação nova precisa de internet para baixar WASM/modelo.
 
 ## Recursos
 
-- fonte de 14px e interface preto/branco;
+- interface preto e branco, tipografia monoespaçada de 14px e layout mobile;
 - gatinho preto ao lado do logotipo;
 - atalhos para HTML, Canvas, jogos, Python, C++, C#, React, API, SQL, depuração, auditoria, PWA e arquivos;
 - anexos PDF, texto e código;
-- blocos `===FILE: nome.ext===` com botões para baixar arquivos individuais ou ZIP;
-- histórico persistido em IndexedDB, exportação em ZIP/JSON/TXT, exclusão local e sincronização opcional em Postgres.
-- biblioteca linguística com análise local por regras em `/api/linguistics/analyze`, cobrindo idioma provável, intenção, palavras-chave e fontes como spaCy, Stanza, Snowball, LanguageTool, Lingua-py, NLTK, CoGrOO e Linguateca.
-- biblioteca de jogos com MakeCode Arcade, microStudio, TIC-80, Kenney Assets, OpenGameArt, Itch.io Free Game Assets, Piskel e Pixelorama.
-- modo resiliente: se a IA online estiver lenta ou indisponível, o frontend responde com biblioteca local em vez de exibir apenas "servidor ocupado".
-- keep-alive no GitHub Actions para aquecer rotas leves da Vercel e reduzir cold start.
+- blocos `===FILE: nome.ext===` com download individual e ZIP;
+- histórico persistido em IndexedDB com fallback para localStorage;
+- exportação do histórico em JSON/TXT/ZIP;
+- streaming de tokens do GGUF e botão para interromper a geração.
 
 ## Desenvolvimento
 
 ```bash
-npm i -g vercel
-vercel dev
+npm install
 npm test
 ```
 
-O frontend está em `index.html`; as funções serverless ficam em `api/`.
+O frontend está em `index.html`. As funções em `api/` e as integrações de provedores foram mantidas para compatibilidade com versões antigas, mas não fazem parte do fluxo local do frontend atual.
 
-## Failover automático
+## Licença e modelos
 
-O endpoint /api/chat não depende de um único servidor. Ele tenta os provedores configurados em ordem e alterna quando recebe erro HTTP, timeout ou interrupção do stream. Provedores com falhas recentes entram em cooldown temporário para evitar repetir imediatamente uma fonte indisponível. O navegador tenta até três fontes e, se todas falharem, mostra a biblioteca local em vez de deixar o usuário sem resposta. Há também limite de 20 requisições por minuto por endereço de origem; ajuste `GUINHO_RATE_LIMIT_MAX` somente se necessário.
-
-Variáveis aceitas na Vercel:
-
-- OPENROUTER_API_KEY, OPENROUTER_API_KEY_2, OPENROUTER_API_KEY_3
-- NVIDIA_API_KEY ou NVIDIA_KEY, com sufixos _2 e _3
-- GROQ_API_KEY, com sufixos _2 e _3
-- DEEPSEEK_API_KEY, com sufixos _2 e _3
-- GEMINI_API_KEY ou GOOGLE_API_KEY, com sufixos _2 e _3
-
-Os modelos podem ser definidos com OPENROUTER_MODEL, NVIDIA_MODEL, GROQ_MODEL, DEEPSEEK_MODEL e GEMINI_MODEL. Chaves nunca são enviadas ao navegador nem gravadas no código.
-
-`GUINHO_PROVIDER_ORDER` aceita uma lista separada por vírgulas. Mesmo que ZeroGPU apareça nessa lista, ele permanece depois dos provedores HTTP para não consumir a cota gratuita antes do failover necessário.
-
-
-## Roteador local automático (Android/Termux)
-
-O arquivo `guinho-router.py` cria um único endpoint local em `http://127.0.0.1:8090`. Ele escolhe automaticamente o modelo pelo pedido e mantém somente um GGUF carregado por vez:
-
-- Qwen Coder: código, erros, terminal e desenvolvimento;
-- Nemotron Nano: análise, explicações longas e planejamento;
-- Gemma: saudações, testes e respostas curtas.
-
-O roteador inicia e encerra o `llama-server` Vulkan sozinho. Os nomes esperados na pasta `~/storage/downloads/I.As` são:
-
-```text
-qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
-NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf
-gemma-3-270m-it-UD-Q8_K_XL.gguf
-```
-
-Execute no Termux:
-
-```bash
-cd ~/llama.cpp
-ps -A | grep '[l]lama-server'
-# se houver um servidor antigo usando 8080, encerre apenas o PID exibido:
-kill PID
-python ~/guinho-router.py
-```
-
-O navegador deve abrir uma cópia local do `Guinho-Code-Qwen-Local.html` em HTTP, no mesmo aparelho, por exemplo:
-
-```bash
-cd ~/guinho-code
-python -m http.server 3000 --bind 127.0.0.1
-```
-
-Depois abra `http://127.0.0.1:3000/Guinho-Code-Qwen-Local.html`. A página já usa `127.0.0.1:8090`; não use a porta 8080 diretamente. A primeira pergunta após trocar de modelo demora mais porque o GGUF precisa ser carregado. O modo local é para o aparelho que executa o Termux; ele não torna esse modelo acessível publicamente no Vercel.
-
-
-## GameEliza MultiDev
-
-A versão determinística com memória de projetos e biblioteca local está em [`gameeliza/`](./gameeliza/). Ela inclui snippets originais para Godot, Python, JavaScript, HTML/CSS, C#, C++, SQL e depuração. Consulte [`gameeliza/README.md`](./gameeliza/README.md) para executar localmente.
+Respeite a licença de cada modelo GGUF e os termos dos repositórios de origem. O Guinho-Code não redistribui os pesos dos modelos.
