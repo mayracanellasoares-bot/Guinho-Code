@@ -23,7 +23,7 @@ Os modelos remotos são baixados dos repositórios públicos do Hugging Face. O 
 4. Quando o estado mostrar **WASM ativo** ou **WebGPU/WASM ativo**, digite no terminal.
 5. Anexe PDF, TXT, Markdown, JSON ou código para análise. O limite atual é 2 MB por arquivo e 3 MB no total.
 
-O WebGPU é usado quando o navegador oferece suporte; se falhar, o Guinho tenta WASM/CPU automaticamente. O modelo continua carregado ao trocar de aba; histórico e conversas ficam no navegador.
+Por estabilidade no Android, o Guinho inicia em WASM/CPU e desativa WebGPU por padrão; se quiser testar a aceleração, abra o console e execute `localStorage.setItem("guinho_enable_webgpu", "1")`, depois recarregue o modelo. Se uma inferência nativa abortar, o motor é recarregado automaticamente uma vez. O modelo continua carregado ao trocar de aba; histórico e conversas ficam no navegador.
 
 ## PWA
 
