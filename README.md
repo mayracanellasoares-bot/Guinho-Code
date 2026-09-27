@@ -10,8 +10,9 @@ A interface principal usa **Wllama**, uma compilação WASM do llama.cpp. O nave
 
 Modelos disponíveis na interface:
 
-- **Tiny LLM F16** — aproximadamente 26,7 MB; carregamento mais rápido, modelo base e respostas simples.
-- **SmolLM2 360M Q2_K** — aproximadamente 218,7 MB; mais capacidade, com maior tempo de download e inferência.
+- **Qwen2.5 0.5B Instruct Q4_K_M** — aproximadamente 491 MB; opção padrão, mais adequada para português e assistente geral.
+- **SmolLM2 360M Instruct Q4_K_M** — aproximadamente 271 MB; mais leve e rápido, porém menos capaz.
+- **Tiny LLM F16** — aproximadamente 26,7 MB; experimental, modelo-base em inglês e não recomendado para conversa.
 
 Os modelos remotos são baixados dos repositórios públicos do Hugging Face. O Wllama mantém os arquivos no cache do navegador (OPFS/IndexedDB conforme o navegador), então a próxima abertura pode reutilizar o download. O arquivo GGUF não é enviado ao GitHub nem à Vercel.
 
