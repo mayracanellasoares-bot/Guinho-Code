@@ -697,7 +697,7 @@ function addDownloadPanel(answer) {
 
 function isNativeAbort(error) {
   const message = String(error?.message || error || "").toUpperCase();
-  return /\\bABORT\\b|RUNTIMEERROR|UNREACHABLE|QUEUE WORK FAILED|GGML_ASSERT|RECEIVED ABORT SIGNAL/.test(message);
+  return /\bABORT\b|RUNTIMEERROR|UNREACHABLE|QUEUE WORK FAILED|GGML_ASSERT|RECEIVED ABORT SIGNAL/.test(message);
 }
 
 function buildPrompt(userText, docs) {
